@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"sort"
@@ -17,15 +18,17 @@ import (
 var counter int32
 
 var (
-    Info  = color.New(color.FgGreen).PrintfFunc()
-    Error = color.New(color.FgRed).PrintfFunc()
+    green  = color.New(color.FgGreen).SprintFunc()
+    red = color.New(color.FgRed).SprintFunc()
 )
 
-// a logger that has a proper timestamp
-var (
-    InfoLogger  = log.New(os.Stdout, Info("[INFO] "), log.LstdFlags)
-    ErrorLogger = log.New(os.Stderr, Error("[ERROR] "), log.LstdFlags)
-)
+func Info(format string, a ...interface{}) {
+	log.Printf("%s", green(fmt.Sprintf(format, a...)))
+}
+
+func Error(format string, a ...interface{}) {
+	log.Printf("%s", red(fmt.Sprintf(format, a...)))
+}
 
 func main() {
 	cookiePtr := flag.String("cookie", "", "Session cookie to be used in the requests")
@@ -34,11 +37,11 @@ func main() {
 	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
 	flag.Parse()
 
-	Info("##################################\n")
-	Info("#                                #\n")
-	Info("#          SessionProbe          #\n")
-	Info("#                                #\n")
-	Info("##################################\n\n")
+	color.Green("##################################\n")
+	color.Green("#                                #\n")
+	color.Green("#          SessionProbe          #\n")
+	color.Green("#                                #\n")
+	color.Green("##################################\n\n")
 
 	// check if the AppVersion was already set during compilation - otherwise manually get it from `./VERSION`
 	CheckAppVersion()
@@ -46,24 +49,24 @@ func main() {
 
 	// the `cookie` and `urls` flags are required
  	if *cookiePtr == "" {
-		ErrorLogger("Please provide a cookie using the -cookie argument\n")
+		Error("Please provide a cookie using the -cookie argument")
 		return
 	}
 	if *urlsPtr == "" {
-		ErrorLogger("Please provide a urls file using the -urls argument\n")
+		Error("Please provide a urls file using the -urls argument")
 		return
 	}
 
 	file, err := os.Open(*urlsPtr)
 	if err != nil {
-		ErrorLogger("%s\n", err)
+		Error("%s", err)
 		return
 	}
 	defer file.Close()
 
 	outFile, err := os.Create(*outPtr)
 	if err != nil {
-		ErrorLogger("%s\n", err)
+		Error("%s", err)
 		return
 	}
 	defer outFile.Close()
@@ -85,13 +88,13 @@ func main() {
 	}
 
 	if scanner.Err() != nil {
-		ErrorLogger("%s\n", scanner.Err())
+		Error("%s", scanner.Err())
 	}
 
 	// total number of URLs
 	urlCount := len(urls) 
 
-	InfoLogger("Starting to check %d URLs with %d threads\n", urlCount, *threadPtr)
+	Info("Starting to check %d URLs with %d threads", urlCount, *threadPtr)
 
 	// map to store URLs by status code
 	urlStatuses := make(map[int][]string)
@@ -118,7 +121,7 @@ func main() {
 			// increment the global counter
 			atomic.AddInt32(&counter, 1)
 			// print progress
-			InfoLogger("Progress: %.2f%%\n", float64(counter)/float64(urlCount)*100)
+			Info("Progress: %.2f%%", float64(counter)/float64(urlCount)*100)
 		}(url)
 	}
 
@@ -137,17 +140,17 @@ func main() {
 	for _, statusCode := range statusCodes {
 		_, err = outFile.WriteString(fmt.Sprintf("Responses with Status Code: %d\n\n", statusCode))
 		if err != nil {
-			ErrorLogger("%s\n", err)
+			Error("%s", err)
 		}
 		for _, url := range urlStatuses[statusCode] {
 			_, err = outFile.WriteString(fmt.Sprintf("%s\n", url))
 			if err != nil {
-				ErrorLogger("%s\n", err)
+				Error("%s", err)
 			}
 		}
 		_, err = outFile.WriteString("\n")
 		if err != nil {
-			ErrorLogger("%s\n", err)
+			Error("%s", err)
 		}
 	}
 }
@@ -156,7 +159,7 @@ func main() {
 func checkURL(url, cookie string) int {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		ErrorLogger("%s\n", err)
+		Error("%s", err)
 		return 0
 	}
 
@@ -169,7 +172,7 @@ func checkURL(url, cookie string) int {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		ErrorLogger("%s\n", err)
+		Error("%s", err)
 		return 0
 	}
 	defer resp.Body.Close()
