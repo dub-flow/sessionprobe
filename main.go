@@ -7,9 +7,10 @@ import (
 	"log"
 	"net/http"
 	"io"
-	neturl "net/url" // import net/url as neturl to avoid naming collision
+	neturl "net/url" 
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -33,7 +34,7 @@ func Error(format string, a ...interface{}) {
 }
 
 func main() {
-	cookiePtr := flag.String("cookie", "", "Session cookie to be used in the requests")
+	headersPtr := flag.String("headers", "", "HTTP headers to be used in the requests in the format \"Key1:Value1;Key2:Value2;...\"")
 	urlsPtr := flag.String("urls", "", "File containing the URLs to be checked")
 	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
 	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
@@ -55,11 +56,8 @@ func main() {
 		Error("Please provide a urls file using the -urls argument")
 		return
 	}
-	// if no cookie is provided, we test for unauthenticated access
-	if *cookiePtr == "" {
-		Info("No -cookie was provided, thus testing unauthenticated access")
-		return
-	}
+
+	headers := parseHeaders(*headersPtr)
 
 	file, err := os.Open(*urlsPtr)
 	if err != nil {
@@ -107,13 +105,14 @@ func main() {
 	// process each URL in the deduplicated map
 	for url := range urls {
 		wg.Add(1)
+
 		// will block if there is already `*threadPtr` threads running
 		sem <- true
 
 		// launch a new goroutine for each URL
 		go func(url string) {
 			defer wg.Done()
-			statusCode, length := checkURL(url, *cookiePtr, *proxyPtr)
+			statusCode, length := checkURL(url, headers, *proxyPtr)
 			// add URL to status code map
 			urlStatusesMutex.Lock()
 			urlStatuses[statusCode] = append(urlStatuses[statusCode], fmt.Sprintf("%s => Length: %d", url, length))
@@ -124,7 +123,6 @@ func main() {
 
 			// increment the global counter
 			atomic.AddInt32(&counter, 1)
-			// print progress
 			Info("Progress: %.2f%%", float64(counter)/float64(urlCount)*100)
 		}(url)
 	}
@@ -159,15 +157,31 @@ func main() {
 	}
 }
 
+func parseHeaders(headers string) map[string]string {
+	headerMap := make(map[string]string)
+	pairs := strings.Split(headers, ";")
+	for _, pair := range pairs {
+		parts := strings.SplitN(pair, ":", 2)
+		if len(parts) != 2 {
+			Error("Invalid header format: %s", pair)
+			continue
+		}
+		headerMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+	}
+	return headerMap
+}
+
 // function to do the HTTP request and check the response's status code and response length
-func checkURL(url, cookie, proxy string) (int, int64) {
+func checkURL(url string, headers map[string]string, proxy string) (int, int64) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		Error("%s", err)
 		return 0, 0
 	}
 
-	req.Header.Add("Cookie", cookie)
+	for key, value := range headers {
+		req.Header.Add(key, value)
+	}
 
 	var client *http.Client
 
@@ -184,7 +198,7 @@ func checkURL(url, cookie, proxy string) (int, int64) {
 			},
 		}
 	} else {
-		// if no proxy was provide
+		// if no proxy was provided
 		client = &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				// this will prevent redirect
@@ -200,7 +214,6 @@ func checkURL(url, cookie, proxy string) (int, int64) {
 	}
 	defer resp.Body.Close()
 
-	// use io.Copy to count the bytes in the response body
 	length, err := io.Copy(io.Discard, resp.Body)
 	if err != nil {
 		Error("%s", err)

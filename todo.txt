@@ -3,8 +3,4 @@
 
 * Make this a Burp extension?!
 
-* Make compatible with Bearer Token
-
-* Let user add in any other header they may need
-
 * Support not only GET but POST/PATCH/PUT/DELETE
