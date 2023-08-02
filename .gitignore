@@ -24,3 +24,5 @@ sessionprobe
 urls.txt
 output.txt
 releases
+
+.DS_Store
