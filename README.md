@@ -1,5 +1,4 @@
 ![Go Version](https://img.shields.io/github/go-mod/go-version/fw10/sessionprobe)
-![GitHub Downloads](https://img.shields.io/github/downloads/fw10/sessionprobe/total)
 
 # SessionProbe 🚀⚡
 
