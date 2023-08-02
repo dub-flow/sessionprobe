@@ -65,7 +65,12 @@ Responses with Status Code: 502
 
 # Features 🔎 
 
-- <tbd>
+- Test for authorization issues
+- Automatically dedupes URLs
+- Sorts the URLs by response status code and extension (e.g., `.css`, `.js`), and provides the length
+- Multi-threaded
+- Proxy functionality to e.g. pass all requests through `Burp`
+- ...
 
 # Bug Reports 🐞
 
