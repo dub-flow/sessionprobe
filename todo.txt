@@ -1,4 +1,10 @@
 * Consider not passing cookies as CLI argument to prevent them from being leaked
     - Maybe interactive input? Or reading from a file?
 
-* Make this a Burp extension
+* Make this a Burp extension?!
+
+* Make compatible with Bearer Token
+
+* Let user add in any other header they may need
+
+* Support not only GET but POST/PATCH/PUT/DELETE
