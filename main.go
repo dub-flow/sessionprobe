@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"sort"
@@ -23,8 +22,6 @@ var (
 )
 
 func main() {
-	VERSION, _ := ioutil.ReadFile("VERSION")
-
 	cookiePtr := flag.String("cookie", "", "Session cookie to be used in the requests")
 	urlsPtr := flag.String("urls", "", "File containing the URLs to be checked")
 	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
@@ -34,9 +31,12 @@ func main() {
 	Info("##################################\n")
 	Info("#                                #\n")
 	Info("#          SessionProbe          #\n")
-	Info("#          Version: %s        #\n", string(VERSION))
 	Info("#                                #\n")
 	Info("##################################\n\n")
+
+	// check if the AppVersion was already set during compilation - otherwise manually get it from `./VERSION`
+	CheckAppVersion()
+	color.Yellow("Current version: %s\n\n", AppVersion)
 
 	// the `cookie` and `urls` flags are required
  	if *cookiePtr == "" {
