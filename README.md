@@ -20,8 +20,8 @@ Usage:
     sessionprobe [flags]
 
 Flags:
-  -headers  string   The session token and other required headers to be used in the requests (required)
   -urls     string   File containing the URLs to be checked (required)
+  -headers  string   The session token and other required headers to be used in the requests
   -out      string   Output file (default: ./output.txt)
   -threads  int      Number of threads (default: 10)
   -proxy    string   Use a proxy to connect to the target URL (default: "")
