@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	neturl "net/url" // import net/url as neturl to avoid naming collision
 	"os"
 	"sort"
 	"sync"
@@ -35,6 +36,7 @@ func main() {
 	urlsPtr := flag.String("urls", "", "File containing the URLs to be checked")
 	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
 	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
+	proxyPtr := flag.String("proxy", "", "Proxy URL (default: \"\")")
 	flag.Parse()
 
 	color.Green("##################################\n")
@@ -109,7 +111,7 @@ func main() {
 		// launch a new goroutine for each URL
 		go func(url string) {
 			defer wg.Done()
-			statusCode := checkURL(url, *cookiePtr)
+			statusCode := checkURL(url, *cookiePtr, *proxyPtr)
 			// add URL to status code map
 			urlStatusesMutex.Lock()
 			urlStatuses[statusCode] = append(urlStatuses[statusCode], url)
@@ -156,7 +158,7 @@ func main() {
 }
 
 // function to do the HTTP request and check the response's status code
-func checkURL(url, cookie string) int {
+func checkURL(url, cookie, proxy string) int {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		Error("%s", err)
@@ -164,12 +166,31 @@ func checkURL(url, cookie string) int {
 	}
 
 	req.Header.Add("Cookie", cookie)
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// this will prevent redirect
-			return http.ErrUseLastResponse
-		},
+
+	var client *http.Client
+
+	if proxy != "" {
+		// if a proxy was provided via `-proxy`
+		proxyURL, _ := neturl.Parse(proxy)
+		client = &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyURL(proxyURL),
+			},
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				// this will prevent redirect
+				return http.ErrUseLastResponse
+			},
+		}
+	} else {
+		// if no proxy was provided 
+		client = &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				// this will prevent redirect
+				return http.ErrUseLastResponse
+			},
+		}
 	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		Error("%s", err)

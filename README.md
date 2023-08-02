@@ -1,4 +1,5 @@
 ![Go Version](https://img.shields.io/github/go-mod/go-version/fw10/sessionprobe)
+![GitHub Downloads](https://img.shields.io/github/downloads/fw10/sessionprobe/total)
 
 # SessionProbe 🚀⚡
 
@@ -23,10 +24,12 @@ Flags:
   -urls    string   File containing the URLs to be checked (required)
   -out     string   Output file (default: ./output.txt)
   -threads int      Number of threads (default: 10)
+  -proxy   string   Use a proxy to connect to the target URL (default: "")
 
 Examples:
     ./sessionprobe -urls ./urls.txt -threads 15 -cookie ".AspNetCore.Cookies=<cookie>" -out ./output.txt
-    ./sessionprobe -urls ./urls.txt -cookie "PHPSESSID=<cookie>"
+    ./sessionprobe -urls ./urls.txt -cookie "PHPSESSID=<cookie>" -proxy http://localhost:8080
+    ./sessionprobe -urls ./urls.txt -cookie "JSESSIONID=<cookie>"
 ```
 
 # Setup ✅
@@ -59,3 +62,11 @@ Responses with Status Code: 502
 ...
 
 ```
+
+# Features 🔎 
+
+- <tbd>
+
+# Bug Reports 🐞
+
+If you find a bug, please file an Issue right here in GitHub, and I will try to resolve it in a timely manner.
