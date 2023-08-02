@@ -11,7 +11,7 @@ func CheckAppVersion() {
 	if AppVersion == "0.0.0" {
 		version, err := os.ReadFile("VERSION")
 		if err != nil {
-			fmt.Println(err)(err)
+			fmt.Println(err)
 		}
 
 		// manually assign the value from `./VERSION` if it wasn't assigned during compilation already. This makes sure
