@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"sort"
@@ -13,7 +14,8 @@ import (
 	"github.com/fatih/color"
 )
 
-var counter int32 // global counter for URLs processed
+// global counter for URLs processed
+var counter int32
 
 var (
     Info  = color.New(color.FgGreen).PrintfFunc()
@@ -21,17 +23,20 @@ var (
 )
 
 func main() {
+	VERSION, _ := ioutil.ReadFile("VERSION")
+
 	cookiePtr := flag.String("cookie", "", "Session cookie to be used in the requests")
 	urlsPtr := flag.String("urls", "", "File containing the URLs to be checked")
 	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
 	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
 	flag.Parse()
 
-	Info("##############################\n")
-	Info("#                            #\n")
-	Info("#        SessionProbe        #\n")
-	Info("#                            #\n")
-	Info("##############################\n\n")
+	Info("##################################\n")
+	Info("#                                #\n")
+	Info("#          SessionProbe          #\n")
+	Info("#          Version: %s        #\n", string(VERSION))
+	Info("#                                #\n")
+	Info("##################################\n\n")
 
 	// the `cookie` and `urls` flags are required
  	if *cookiePtr == "" {
@@ -77,7 +82,8 @@ func main() {
 		Error("%s\n", scanner.Err())
 	}
 
-	urlCount := len(urls) // total number of URLs
+	// total number of URLs
+	urlCount := len(urls) 
 
 	Info("Starting to check %d URLs with %d threads\n", urlCount, *threadPtr)
 
