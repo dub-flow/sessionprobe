@@ -20,9 +20,13 @@ func main() {
 	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
 	flag.Parse()
 
-	// the `cookie` flag is required
+	// the `cookie` and `urls` flags are required
  	if *cookiePtr == "" {
 		log.Fatalln("Please provide a cookie using the -cookie argument")
+		return
+	}
+	if *urlsPtr == "" {
+		log.Fatalln("Please provide a urls file using the -urls argument")
 		return
 	}
 

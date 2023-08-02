@@ -19,3 +19,7 @@
 
 # Go workspace file
 go.work
+
+sessionprobe
+urls.txt
+output.txt
