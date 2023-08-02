@@ -30,6 +30,7 @@ Examples:
     ./sessionprobe -urls ./urls.txt -threads 15 -headers "Cookies: .AspNetCore.Cookies=<cookie>" -out ./output.txt
     ./sessionprobe -urls ./urls.txt -headers "Cookies: PHPSESSID=<cookie>" -proxy http://localhost:8080
     ./sessionprobe -urls ./urls.txt -headers "Authorization: Bearer <token>"
+    ./sessionprobe -urls ./urls.txt -out ./unauthenticated-test.txt
 ```
 
 # Setup ✅
