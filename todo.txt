@@ -1,1 +1,2 @@
-* Don't pass cookies as CLI argument to prevent them from being leaked
+* Consider not passing cookies as CLI argument to prevent them from being leaked
+    - Maybe interactive input? Or reading from a file?

@@ -32,3 +32,29 @@ Examples:
 
 - You can simply run this tool from source via `go run .` 
 - You can build the tool yourself via `go build`
+
+# Example Output
+
+```
+Responses with Status Code: 200
+
+https://<some-host>/<some-path>
+...
+
+Responses with Status Code: 301
+
+...
+
+Responses with Status Code: 302
+
+...
+
+Responses with Status Code: 404
+
+...
+
+Responses with Status Code: 502
+
+...
+
+```
