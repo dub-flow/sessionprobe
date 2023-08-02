@@ -57,7 +57,11 @@ func main() {
 		return
 	}
 
-	headers := parseHeaders(*headersPtr)
+	var headers map[string]string
+	if *headersPtr != "" {
+		headers = parseHeaders(*headersPtr)
+	}
+
 
 	file, err := os.Open(*urlsPtr)
 	if err != nil {
@@ -160,14 +164,18 @@ func main() {
 func parseHeaders(headers string) map[string]string {
 	headerMap := make(map[string]string)
 	pairs := strings.Split(headers, ";")
+
 	for _, pair := range pairs {
 		parts := strings.SplitN(pair, ":", 2)
+
 		if len(parts) != 2 {
 			Error("Invalid header format: %s", pair)
 			continue
 		}
+		
 		headerMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 	}
+
 	return headerMap
 }
 

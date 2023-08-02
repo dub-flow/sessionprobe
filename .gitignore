@@ -20,9 +20,10 @@
 # Go workspace file
 go.work
 
-sessionprobe
+sessionprobe*
 urls.txt
 output.txt
 releases
 
 .DS_Store
+unauthenticated.txt
