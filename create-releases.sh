@@ -14,7 +14,7 @@ mv sessionprobe.exe releases/sessionprobe-windows-amd64.exe
 
 # build for M1 Macs (arm64)
 GOOS=darwin GOARCH=arm64 go build -ldflags="$FLAGS" -trimpath
-mv sessionprobe/sessionprobe-mac-arm64
+mv sessionprobe releases/sessionprobe-mac-arm64
 
 # build for Intel Macs (amd64)
 GOOS=darwin GOARCH=amd64 go build -ldflags="$FLAGS" -trimpath
