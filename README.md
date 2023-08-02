@@ -18,12 +18,12 @@ Usage:
 Flags:
   -cookie  string   Session cookie to be used in the requests (required)
   -urls    string   File containing the URLs to be checked (required)
+  -out     string   Output file (default: ./output.txt)
   -threads int      Number of threads (default: 10)
-  -out     string   Output file (default: output.txt)
 
 Examples:
-    ./sessionprobe -urls "urls.txt" -threads 15 -cookie ".AspNetCore.Cookies=<cookie>" -out output.txt
-    ./sessionprobe -urls "urls.txt" -cookie ".AspNetCore.Cookies=<cookie>"
+    ./sessionprobe -urls ./urls.txt -threads 15 -cookie ".AspNetCore.Cookies=<cookie>" -out ./output.txt
+    ./sessionprobe -urls ./urls.txt -cookie ".AspNetCore.Cookies=<cookie>"
 ```
 
 # Setup ✅

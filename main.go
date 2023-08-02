@@ -15,7 +15,7 @@ var counter int32 // global counter for URLs processed
 
 func main() {
 	cookiePtr := flag.String("cookie", "", "Session cookie to be used in the requests")
-	urlsPtr := flag.String("urls", "urls.txt", "File containing the URLs to be checked")
+	urlsPtr := flag.String("urls", "", "File containing the URLs to be checked")
 	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
 	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
 	flag.Parse()
