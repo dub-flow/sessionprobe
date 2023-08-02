@@ -26,7 +26,7 @@ Flags:
 
 Examples:
     ./sessionprobe -urls ./urls.txt -threads 15 -cookie ".AspNetCore.Cookies=<cookie>" -out ./output.txt
-    ./sessionprobe -urls ./urls.txt -cookie ".AspNetCore.Cookies=<cookie>"
+    ./sessionprobe -urls ./urls.txt -cookie "PHPSESSID=<cookie>"
 ```
 
 # Setup ✅
