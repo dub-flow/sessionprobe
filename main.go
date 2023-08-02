@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"path/filepath"
 
 	"github.com/fatih/color"
 )
@@ -148,6 +149,12 @@ func main() {
 		if err != nil {
 			Error("%s", err)
 		}
+
+		// Sort URLs by extension for each status code
+		sort.Slice(urlStatuses[statusCode], func(i, j int) bool {
+			return filepath.Ext(urlStatuses[statusCode][i]) < filepath.Ext(urlStatuses[statusCode][j])
+		})
+
 		for _, url := range urlStatuses[statusCode] {
 			_, err = outFile.WriteString(fmt.Sprintf("%s\n", url))
 			if err != nil {
@@ -201,7 +208,6 @@ func checkURL(url string, headers map[string]string, proxy string) (int, int64) 
 				Proxy: http.ProxyURL(proxyURL),
 			},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				// this will prevent redirect
 				return http.ErrUseLastResponse
 			},
 		}
@@ -209,7 +215,6 @@ func checkURL(url string, headers map[string]string, proxy string) (int, int64) 
 		// if no proxy was provided
 		client = &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				// this will prevent redirect
 				return http.ErrUseLastResponse
 			},
 		}
@@ -217,16 +222,16 @@ func checkURL(url string, headers map[string]string, proxy string) (int, int64) 
 
 	resp, err := client.Do(req)
 	if err != nil {
-		Error("%s", err)
+		Error("Failed to make the request: %s", err)
 		return 0, 0
 	}
 	defer resp.Body.Close()
 
-	length, err := io.Copy(io.Discard, resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		Error("%s", err)
+		Error("Failed to read the response: %s", err)
 		return resp.StatusCode, 0
 	}
 
-	return resp.StatusCode, length
+	return resp.StatusCode, int64(len(body))
 }
