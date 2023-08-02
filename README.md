@@ -27,8 +27,8 @@ Flags:
   -proxy    string   Use a proxy to connect to the target URL (default: "")
 
 Examples:
-    ./sessionprobe -urls ./urls.txt -threads 15 -headers "Cookies: .AspNetCore.Cookies=<cookie>" -out ./output.txt
-    ./sessionprobe -urls ./urls.txt -headers "Cookies: PHPSESSID=<cookie>" -proxy http://localhost:8080
+    ./sessionprobe -urls ./urls.txt -threads 15 -headers "Cookie: .AspNetCore.Cookies=<cookie>" -out ./output.txt
+    ./sessionprobe -urls ./urls.txt -headers "Cookie: PHPSESSID=<cookie>" -proxy http://localhost:8080
     ./sessionprobe -urls ./urls.txt -headers "Authorization: Bearer <token>"
     ./sessionprobe -urls ./urls.txt -out ./unauthenticated-test.txt
 ```
