@@ -35,18 +35,9 @@ func Error(format string, a ...interface{}) {
 }
 
 func main() {
-	headersPtr := flag.String("headers", "", "HTTP headers to be used in the requests in the format \"Key1:Value1;Key2:Value2;...\"")
-	urlsPtr := flag.String("urls", "", "File containing the URLs to be checked")
-	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
-	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
-	proxyPtr := flag.String("proxy", "", "Proxy URL (default: \"\")")
-	flag.Parse()
+	headersPtr, urlsPtr, threadPtr, outPtr, proxyPtr := setUpFlags()
 
-	color.Green("##################################\n")
-	color.Green("#                                #\n")
-	color.Green("#          SessionProbe          #\n")
-	color.Green("#                                #\n")
-	color.Green("##################################\n\n")
+	printIntro()
 
 	// check if the AppVersion was already set during compilation - otherwise manually get it from `./VERSION`
 	CheckAppVersion()
@@ -57,12 +48,11 @@ func main() {
 		Error("Please provide a urls file using the -urls argument")
 		return
 	}
-
+	
 	var headers map[string]string
 	if *headersPtr != "" {
 		headers = parseHeaders(*headersPtr)
 	}
-
 
 	file, err := os.Open(*urlsPtr)
 	if err != nil {
@@ -83,11 +73,47 @@ func main() {
 	// make sure to wait for all threads to finish before exiting the program
 	var wg sync.WaitGroup
 
+	// using a map to deduplicate URLs
+	urls := readURLs(file)
+
+	// total number of URLs
+	urlCount := len(urls) 
+
+	Info("Starting to check %d URLs with %d threads", urlCount, *threadPtr)
+
+	// map to store URLs by status code
+	urlStatuses := processURLs(urls, headers, proxyPtr, &wg, sem)
+
+	// wait for all threads to finish
+	wg.Wait()
+
+	writeToFile(urlStatuses, outFile)
+}
+
+func setUpFlags() (*string, *string, *int, *string, *string) {
+	headersPtr := flag.String("headers", "", "HTTP headers to be used in the requests in the format \"Key1:Value1;Key2:Value2;...\"")
+	urlsPtr := flag.String("urls", "", "File containing the URLs to be checked")
+	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
+	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
+	proxyPtr := flag.String("proxy", "", "Proxy URL (default: \"\")")
+	flag.Parse()
+
+	return headersPtr, urlsPtr, threadPtr, outPtr, proxyPtr
+}
+
+func printIntro() {
+	color.Green("##################################\n")
+	color.Green("#                                #\n")
+	color.Green("#          SessionProbe          #\n")
+	color.Green("#                                #\n")
+	color.Green("##################################\n\n")
+}
+
+func readURLs(file *os.File) map[string]bool {
 	// read the URLs line by line
 	scanner := bufio.NewScanner(file)
 
-	// using a map to deduplicate URLs (since map keys are unique in Go, so by using the URLs as the keys, 
-	// we effectively remove any duplicate URLs)
+	// deduplicate URLs
 	urls := make(map[string]bool)
 	for scanner.Scan() {
 		url := scanner.Text()
@@ -98,11 +124,10 @@ func main() {
 		Error("%s", scanner.Err())
 	}
 
-	// total number of URLs
-	urlCount := len(urls) 
+	return urls
+}
 
-	Info("Starting to check %d URLs with %d threads", urlCount, *threadPtr)
-
+func processURLs(urls map[string]bool, headers map[string]string, proxyPtr *string, wg *sync.WaitGroup, sem chan bool) map[int][]string {
 	// map to store URLs by status code
 	urlStatuses := make(map[int][]string)
 	var urlStatusesMutex sync.Mutex
@@ -128,13 +153,14 @@ func main() {
 
 			// increment the global counter
 			atomic.AddInt32(&counter, 1)
-			Info("Progress: %.2f%%", float64(counter)/float64(urlCount)*100)
+			Info("Progress: %.2f%%", float64(counter)/float64(len(urls))*100)
 		}(url)
 	}
 
-	// wait for all threads to finish
-	wg.Wait()
+	return urlStatuses
+}
 
+func writeToFile(urlStatuses map[int][]string, outFile *os.File) {
 	// get the list of status codes
 	statusCodes := make([]int, 0, len(urlStatuses))
 	for statusCode := range urlStatuses {
@@ -145,7 +171,7 @@ func main() {
 
 	// write output to file, sorted by status code
 	for _, statusCode := range statusCodes {
-		_, err = outFile.WriteString(fmt.Sprintf("Responses with Status Code: %d\n\n", statusCode))
+		_, err := outFile.WriteString(fmt.Sprintf("Responses with Status Code: %d\n\n", statusCode))
 		if err != nil {
 			Error("%s", err)
 		}
