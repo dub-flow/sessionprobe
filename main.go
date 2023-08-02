@@ -4,15 +4,21 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"sort"
 	"sync"
 	"sync/atomic"
+
+	"github.com/fatih/color"
 )
 
 var counter int32 // global counter for URLs processed
+
+var (
+    Info  = color.New(color.FgGreen).PrintfFunc()
+    Error = color.New(color.FgRed).PrintfFunc()
+)
 
 func main() {
 	cookiePtr := flag.String("cookie", "", "Session cookie to be used in the requests")
@@ -21,32 +27,32 @@ func main() {
 	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
 	flag.Parse()
 
-	log.Println("##############################")
-	log.Println("#                            #")
-	log.Println("#        SessionProbe        #")
-	log.Println("#                            #")
-	log.Println("###############################" + "\n\n")
+	Info("##############################\n")
+	Info("#                            #\n")
+	Info("#        SessionProbe        #\n")
+	Info("#                            #\n")
+	Info("##############################\n\n")
 
 	// the `cookie` and `urls` flags are required
  	if *cookiePtr == "" {
-		log.Fatalln("Please provide a cookie using the -cookie argument")
+		Error("Please provide a cookie using the -cookie argument\n")
 		return
 	}
 	if *urlsPtr == "" {
-		log.Fatalln("Please provide a urls file using the -urls argument")
+		Error("Please provide a urls file using the -urls argument\n")
 		return
 	}
 
 	file, err := os.Open(*urlsPtr)
 	if err != nil {
-		log.Fatalln(err)
+		Error("%s\n", err)
 		return
 	}
 	defer file.Close()
 
 	outFile, err := os.Create(*outPtr)
 	if err != nil {
-		log.Fatalln(err)
+		Error("%s\n", err)
 		return
 	}
 	defer outFile.Close()
@@ -68,12 +74,12 @@ func main() {
 	}
 
 	if scanner.Err() != nil {
-		log.Fatalln(scanner.Err())
+		Error("%s\n", scanner.Err())
 	}
 
 	urlCount := len(urls) // total number of URLs
 
-	log.Printf("Starting to check %d URLs with %d threads\n", urlCount, *threadPtr)
+	Info("Starting to check %d URLs with %d threads\n", urlCount, *threadPtr)
 
 	// map to store URLs by status code
 	urlStatuses := make(map[int][]string)
@@ -100,7 +106,7 @@ func main() {
 			// increment the global counter
 			atomic.AddInt32(&counter, 1)
 			// print progress
-			log.Printf("Progress: %.2f%%\n", float64(counter)/float64(urlCount)*100)
+			Info("Progress: %.2f%%\n", float64(counter)/float64(urlCount)*100)
 		}(url)
 	}
 
@@ -119,17 +125,17 @@ func main() {
 	for _, statusCode := range statusCodes {
 		_, err = outFile.WriteString(fmt.Sprintf("Responses with Status Code: %d\n\n", statusCode))
 		if err != nil {
-			log.Println(err)
+			Error("%s\n", err)
 		}
 		for _, url := range urlStatuses[statusCode] {
 			_, err = outFile.WriteString(fmt.Sprintf("%s\n", url))
 			if err != nil {
-				log.Println(err)
+				Error("%s\n", err)
 			}
 		}
 		_, err = outFile.WriteString("\n")
 		if err != nil {
-			log.Println(err)
+			Error("%s\n", err)
 		}
 	}
 }
@@ -138,7 +144,7 @@ func main() {
 func checkURL(url, cookie string) int {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Println(err)
+		Error("%s\n", err)
 		return 0
 	}
 
@@ -146,7 +152,7 @@ func checkURL(url, cookie string) int {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println(err)
+		Error("%s\n", err)
 		return 0
 	}
 	defer resp.Body.Close()
