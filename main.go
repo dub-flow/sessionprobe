@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"sync"
 	"sync/atomic"
 )
@@ -19,6 +20,12 @@ func main() {
 	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
 	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
 	flag.Parse()
+
+	log.Println("##############################")
+	log.Println("#                            #")
+	log.Println("#        SessionProbe        #")
+	log.Println("#                            #")
+	log.Println("###############################" + "\n\n")
 
 	// the `cookie` and `urls` flags are required
  	if *cookiePtr == "" {
@@ -68,6 +75,10 @@ func main() {
 
 	log.Printf("Starting to check %d URLs with %d threads\n", urlCount, *threadPtr)
 
+	// map to store URLs by status code
+	urlStatuses := make(map[int][]string)
+	var urlStatusesMutex sync.Mutex
+
 	// process each URL in the deduplicated map
 	for url := range urls {
 		wg.Add(1)
@@ -78,11 +89,11 @@ func main() {
 		go func(url string) {
 			defer wg.Done()
 			statusCode := checkURL(url, *cookiePtr)
-			// write output to file
-			_, err := outFile.WriteString(fmt.Sprintf("%s => %d\n", url, statusCode))
-			if err != nil {
-				log.Println(err)
-			}
+			// add URL to status code map
+			urlStatusesMutex.Lock()
+			urlStatuses[statusCode] = append(urlStatuses[statusCode], url)
+			urlStatusesMutex.Unlock()
+
 			// removing a slot in the semaphore so that a new goroutine can be created
 			<-sem
 
@@ -95,6 +106,32 @@ func main() {
 
 	// wait for all threads to finish
 	wg.Wait()
+
+	// get the list of status codes
+	statusCodes := make([]int, 0, len(urlStatuses))
+	for statusCode := range urlStatuses {
+		statusCodes = append(statusCodes, statusCode)
+	}
+	// sort the status codes
+	sort.Ints(statusCodes)
+
+	// write output to file, sorted by status code
+	for _, statusCode := range statusCodes {
+		_, err = outFile.WriteString(fmt.Sprintf("Responses with Status Code: %d\n\n", statusCode))
+		if err != nil {
+			log.Println(err)
+		}
+		for _, url := range urlStatuses[statusCode] {
+			_, err = outFile.WriteString(fmt.Sprintf("%s\n", url))
+			if err != nil {
+				log.Println(err)
+			}
+		}
+		_, err = outFile.WriteString("\n")
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 // function to do the HTTP request and check the response's status code
@@ -116,4 +153,3 @@ func checkURL(url, cookie string) int {
 
 	return resp.StatusCode
 }
-
