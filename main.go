@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"io"
 	neturl "net/url" // import net/url as neturl to avoid naming collision
 	"os"
 	"sort"
@@ -49,13 +50,14 @@ func main() {
 	CheckAppVersion()
 	color.Yellow("Current version: %s\n\n", AppVersion)
 
-	// the `cookie` and `urls` flags are required
- 	if *cookiePtr == "" {
-		Error("Please provide a cookie using the -cookie argument")
-		return
-	}
+	// the `urls` flag is required
 	if *urlsPtr == "" {
 		Error("Please provide a urls file using the -urls argument")
+		return
+	}
+	// if no cookie is provided, we test for unauthenticated access
+	if *cookiePtr == "" {
+		Info("No -cookie was provided, thus testing unauthenticated access")
 		return
 	}
 
@@ -111,10 +113,10 @@ func main() {
 		// launch a new goroutine for each URL
 		go func(url string) {
 			defer wg.Done()
-			statusCode := checkURL(url, *cookiePtr, *proxyPtr)
+			statusCode, length := checkURL(url, *cookiePtr, *proxyPtr)
 			// add URL to status code map
 			urlStatusesMutex.Lock()
-			urlStatuses[statusCode] = append(urlStatuses[statusCode], url)
+			urlStatuses[statusCode] = append(urlStatuses[statusCode], fmt.Sprintf("%s => Length: %d", url, length))
 			urlStatusesMutex.Unlock()
 
 			// removing a slot in the semaphore so that a new goroutine can be created
@@ -157,12 +159,12 @@ func main() {
 	}
 }
 
-// function to do the HTTP request and check the response's status code
-func checkURL(url, cookie, proxy string) int {
+// function to do the HTTP request and check the response's status code and response length
+func checkURL(url, cookie, proxy string) (int, int64) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		Error("%s", err)
-		return 0
+		return 0, 0
 	}
 
 	req.Header.Add("Cookie", cookie)
@@ -182,7 +184,7 @@ func checkURL(url, cookie, proxy string) int {
 			},
 		}
 	} else {
-		// if no proxy was provided 
+		// if no proxy was provide
 		client = &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				// this will prevent redirect
@@ -194,9 +196,16 @@ func checkURL(url, cookie, proxy string) int {
 	resp, err := client.Do(req)
 	if err != nil {
 		Error("%s", err)
-		return 0
+		return 0, 0
 	}
 	defer resp.Body.Close()
 
-	return resp.StatusCode
+	// use io.Copy to count the bytes in the response body
+	length, err := io.Copy(io.Discard, resp.Body)
+	if err != nil {
+		Error("%s", err)
+		return resp.StatusCode, 0
+	}
+
+	return resp.StatusCode, length
 }
