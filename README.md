@@ -26,10 +26,10 @@ Flags:
   -proxy    string   Use a proxy to connect to the target URL (default: "")
 
 Examples:
-    ./sessionprobe -urls ./urls.txt -threads 15 -headers "Cookie: .AspNetCore.Cookies=<cookie>" -out ./output.txt
+    ./sessionprobe -urls ./urls.txt -headers "Cookie: .AspNetCore.Cookies=<cookie>" 
     ./sessionprobe -urls ./urls.txt -headers "Cookie: PHPSESSID=<cookie>" -proxy http://localhost:8080
     ./sessionprobe -urls ./urls.txt -headers "Authorization: Bearer <token>"
-    ./sessionprobe -urls ./urls.txt -out ./unauthenticated-test.txt
+    ./sessionprobe -urls ./urls.txt -threads 15 -out ./unauthenticated-test.txt
 ```
 
 # Setup ✅
@@ -69,7 +69,7 @@ Responses with Status Code: 502
 - Automatically dedupes URLs
 - Sorts the URLs by response status code and extension (e.g., `.css`, `.js`), and provides the length
 - Multi-threaded
-- Proxy functionality to e.g. pass all requests through `Burp`
+- Proxy functionality to pass all requests e.g. through `Burp`
 - ...
 
 # Bug Reports 🐞
