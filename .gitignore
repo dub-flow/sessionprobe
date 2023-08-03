@@ -27,3 +27,4 @@ releases
 
 .DS_Store
 unauthenticated.txt
+bearer_token*.txt

@@ -2,66 +2,72 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+	"io"
 	"log"
 	"net/http"
-	"io"
-	neturl "net/url" 
+	neturl "net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"path/filepath"
-
-	"github.com/fatih/color"
 )
 
-// global counter for URLs processed
 var counter int32
-
 var (
-    green  = color.New(color.FgGreen).SprintFunc()
-    red = color.New(color.FgRed).SprintFunc()
+    headers string
+    urls    string
+    threads int
+    out     string
+    proxy   string
+    green   = color.New(color.FgGreen).SprintFunc()
+    red     = color.New(color.FgRed).SprintFunc()
 )
-
-func Info(format string, a ...interface{}) {
-	log.Printf("%s", green(fmt.Sprintf(format, a...)))
-}
-
-func Error(format string, a ...interface{}) {
-	log.Printf("%s", red(fmt.Sprintf(format, a...)))
-}
 
 func main() {
-	headersPtr, urlsPtr, threadPtr, outPtr, proxyPtr := setUpFlags()
+	rootCmd := &cobra.Command{
+		Use:   "sessionprobe",
+		Short: "A tool for probing sessions",
+		Long:  `SessionProbe is a tool for probing multiple sessions and recording their responses.`,
+		Run:   run,
+	}
 
+	rootCmd.PersistentFlags().StringVarP(&headers, "headers", "H", "", "HTTP headers to be used in the requests in the format \"Key1:Value1;Key2:Value2;...\"")
+	rootCmd.PersistentFlags().StringVarP(&urls, "urls", "u", "", "file containing the URLs to be checked")
+	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 10, "number of threads (default: 10)")
+	rootCmd.PersistentFlags().StringVarP(&out, "out", "o", "output.txt", "output file (default: output.txt)")
+	rootCmd.PersistentFlags().StringVarP(&proxy, "proxy", "p", "", "proxy URL (default: \"\")")
+
+	rootCmd.Execute()
+}
+
+// run() gets executed when the root command is called
+func run(cmd *cobra.Command, args []string) {
 	printIntro()
-
-	// check if the AppVersion was already set during compilation - otherwise manually get it from `./VERSION`
-	CheckAppVersion()
-	color.Yellow("Current version: %s\n\n", AppVersion)
-
 	// the `urls` flag is required
-	if *urlsPtr == "" {
-		Error("Please provide a urls file using the -urls argument")
+	if urls == "" {
+		Error("Please provide a urls file using the -urls argument.")
+		Error("Use --help for more information.")
 		return
 	}
-	
-	var headers map[string]string
-	if *headersPtr != "" {
-		headers = parseHeaders(*headersPtr)
+
+	var headersMap map[string]string
+	if headers != "" {
+		headersMap = parseHeaders(headers)
 	}
 
-	file, err := os.Open(*urlsPtr)
+	file, err := os.Open(urls)
 	if err != nil {
 		Error("%s", err)
 		return
 	}
 	defer file.Close()
 
-	outFile, err := os.Create(*outPtr)
+	outFile, err := os.Create(out)
 	if err != nil {
 		Error("%s", err)
 		return
@@ -69,36 +75,25 @@ func main() {
 	defer outFile.Close()
 
 	// create semaphore with the specified number of threads
-	sem := make(chan bool, *threadPtr)
+	sem := make(chan bool, threads)
 	// make sure to wait for all threads to finish before exiting the program
 	var wg sync.WaitGroup
 
 	// using a map to deduplicate URLs
-	urls := readURLs(file)
+	urlsMap := readURLs(file)
 
 	// total number of URLs
-	urlCount := len(urls) 
+	urlCount := len(urlsMap)
 
-	Info("Starting to check %d URLs with %d threads", urlCount, *threadPtr)
+	Info("Starting to check %d URLs with %d threads", urlCount, threads)
 
 	// map to store URLs by status code
-	urlStatuses := processURLs(urls, headers, proxyPtr, &wg, sem)
+	urlStatuses := processURLs(urlsMap, headersMap, &proxy, &wg, sem)
 
 	// wait for all threads to finish
 	wg.Wait()
 
 	writeToFile(urlStatuses, outFile)
-}
-
-func setUpFlags() (*string, *string, *int, *string, *string) {
-	headersPtr := flag.String("headers", "", "HTTP headers to be used in the requests in the format \"Key1:Value1;Key2:Value2;...\"")
-	urlsPtr := flag.String("urls", "", "File containing the URLs to be checked")
-	threadPtr := flag.Int("threads", 10, "Number of threads (default: 10)")
-	outPtr := flag.String("out", "output.txt", "Output file (default: output.txt)")
-	proxyPtr := flag.String("proxy", "", "Proxy URL (default: \"\")")
-	flag.Parse()
-
-	return headersPtr, urlsPtr, threadPtr, outPtr, proxyPtr
 }
 
 func printIntro() {
@@ -260,4 +255,12 @@ func checkURL(url string, headers map[string]string, proxy string) (int, int64) 
 	}
 
 	return resp.StatusCode, int64(len(body))
+}
+
+func Info(format string, a ...interface{}) {
+	log.Printf("%s", green(fmt.Sprintf(format, a...)))
+}
+
+func Error(format string, a ...interface{}) {
+	log.Printf("%s", red(fmt.Sprintf(format, a...)))
 }
