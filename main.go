@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net"
 	neturl "net/url"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var counter int32
@@ -51,6 +53,7 @@ func main() {
 // run() gets executed when the root command is called
 func run(cmd *cobra.Command, args []string) {
 	printIntro()
+
 	// the `urls` flag is required
 	if urls == "" {
 		Error("Please provide a URLs file using the '-urls <path_to_urls_file>' argument.")
@@ -63,19 +66,17 @@ func run(cmd *cobra.Command, args []string) {
 		headersMap = parseHeaders(headers)
 	}
 
+	// if a proxy was provided, check if the proxy is reachable. Exit if it's not
+	if proxy != "" {
+		checkProxyReachability(proxy)
+	}
+
 	file, err := os.Open(urls)
 	if err != nil {
 		Error("%s", err)
 		return
 	}
 	defer file.Close()
-
-	outFile, err := os.Create(out)
-	if err != nil {
-		Error("%s", err)
-		return
-	}
-	defer outFile.Close()
 
 	// create semaphore with the specified number of threads
 	sem := make(chan bool, threads)
@@ -95,6 +96,13 @@ func run(cmd *cobra.Command, args []string) {
 
 	// wait for all threads to finish
 	wg.Wait()
+
+	outFile, err := os.Create(out)
+	if err != nil {
+		Error("%s", err)
+		return
+	}
+	defer outFile.Close()
 
 	writeToFile(urlStatuses, outFile)
 }
@@ -174,7 +182,7 @@ func writeToFile(urlStatuses map[int][]string, outFile *os.File) {
 			Error("%s", err)
 		}
 
-		// Sort URLs by extension for each status code
+		// sort URLs by extension for each status code
 		sort.Slice(urlStatuses[statusCode], func(i, j int) bool {
 			return filepath.Ext(urlStatuses[statusCode][i]) < filepath.Ext(urlStatuses[statusCode][j])
 		})
@@ -225,7 +233,7 @@ func checkURL(url string, headers map[string]string, proxy string) (int, int64) 
 	var client *http.Client
 
 	if proxy != "" {
-		// if a proxy was provided via `-proxy`
+		// if a proxy was provided via `-proxy`.. Note that we already verified that the proxy is reachable at this point
 		proxyURL, _ := neturl.Parse(proxy)
 		client = &http.Client{
 			Transport: &http.Transport{
@@ -258,6 +266,22 @@ func checkURL(url string, headers map[string]string, proxy string) (int, int64) 
 	}
 
 	return resp.StatusCode, int64(len(body))
+}
+
+func checkProxyReachability(proxy string) {
+	if proxy != "" {
+		proxyURL, err := neturl.Parse(proxy)
+		if err != nil {
+			Error("Failed to parse proxy URL: %s", err)
+			os.Exit(1)
+		}
+
+		_, err = net.DialTimeout("tcp", proxyURL.Host, 5*time.Second)
+		if err != nil {
+			Error("Failed to connect to the proxy: %s", err)
+			os.Exit(1)
+		}
+	}
 }
 
 func Info(format string, a ...interface{}) {
