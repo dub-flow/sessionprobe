@@ -19,17 +19,17 @@ Usage:
     sessionprobe [flags]
 
 Flags:
-  -urls     string   File containing the URLs to be checked (required)
-  -headers  string   The session token and other required headers to be used in the requests
-  -out      string   Output file (default: ./output.txt)
-  -threads  int      Number of threads (default: 10)
-  -proxy    string   Use a proxy to connect to the target URL (default: "")
+  -H, --headers string   HTTP headers to be used in the requests in the format "Key1:Value1;Key2:Value2;..."
+  -h, --help             help for sessionprobe
+  -o, --out string       output file (default: output.txt) (default "output.txt")
+  -p, --proxy string     proxy URL (default: "")
+  -t, --threads int      number of threads (default: 10) (default 10)
+  -u, --urls string      file containing the URLs to be checked (required)
 
 Examples:
-    ./sessionprobe -urls ./urls.txt -threads 15 -headers "Cookie: .AspNetCore.Cookies=<cookie>" -out ./output.txt
-    ./sessionprobe -urls ./urls.txt -headers "Cookie: PHPSESSID=<cookie>" -proxy http://localhost:8080
-    ./sessionprobe -urls ./urls.txt -headers "Authorization: Bearer <token>"
-    ./sessionprobe -urls ./urls.txt -out ./unauthenticated-test.txt
+    ./sessionprobe -u ./urls.txt --out ./unauthenticated-test.txt
+    ./sessionprobe -u ./urls.txt --threads 15 -H "Cookie: .AspNetCore.Cookies=<cookie>" -o ./output.txt
+    ./sessionprobe -u ./urls.txt -H "Authorization: Bearer <token>" --proxy http://localhost:8080
 ```
 
 # Setup ✅
