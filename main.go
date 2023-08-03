@@ -40,7 +40,7 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&headers, "headers", "H", "", "HTTP headers to be used in the requests in the format \"Key1:Value1;Key2:Value2;...\"")
-	rootCmd.PersistentFlags().StringVarP(&urls, "urls", "u", "", "file containing the URLs to be checked")
+	rootCmd.PersistentFlags().StringVarP(&urls, "urls", "u", "", "file containing the URLs to be checked (required)")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 10, "number of threads (default: 10)")
 	rootCmd.PersistentFlags().StringVarP(&out, "out", "o", "output.txt", "output file (default: output.txt)")
 	rootCmd.PersistentFlags().StringVarP(&proxy, "proxy", "p", "", "proxy URL (default: \"\")")
@@ -53,7 +53,7 @@ func run(cmd *cobra.Command, args []string) {
 	printIntro()
 	// the `urls` flag is required
 	if urls == "" {
-		Error("Please provide a urls file using the -urls argument.")
+		Error("Please provide a URLs file using the '-urls <path_to_urls_file>' argument.")
 		Error("Use --help for more information.")
 		return
 	}
