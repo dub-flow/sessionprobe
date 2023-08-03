@@ -27,9 +27,9 @@ Flags:
 
 Examples:
     ./sessionprobe -urls ./urls.txt -headers "Cookie: .AspNetCore.Cookies=<cookie>" 
-    ./sessionprobe -urls ./urls.txt -headers "Cookie: PHPSESSID=<cookie>" -proxy http://localhost:8080
     ./sessionprobe -urls ./urls.txt -headers "Authorization: Bearer <token>"
     ./sessionprobe -urls ./urls.txt -threads 15 -out ./unauthenticated-test.txt
+    ./sessionprobe -urls ./urls.txt -proxy http://localhost:8080
 ```
 
 # Setup ✅
