@@ -27,8 +27,8 @@ Flags:
   -u, --urls string      file containing the URLs to be checked (required)
 
 Examples:
-    ./sessionprobe -u ./urls.txt --out ./unauthenticated-test.txt
-    ./sessionprobe -u ./urls.txt --threads 15 -H "Cookie: .AspNetCore.Cookies=<cookie>" -o ./output.txt
+    ./sessionprobe -u ./urls.txt --out ./unauthenticated-test.txt --threads 15
+    ./sessionprobe -u ./urls.txt -H "Cookie: .AspNetCore.Cookies=<cookie>" -o ./output.txt
     ./sessionprobe -u ./urls.txt -H "Authorization: Bearer <token>" --proxy http://localhost:8080
 ```
 
