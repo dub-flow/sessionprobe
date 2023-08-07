@@ -7,7 +7,7 @@
 
 `SessionProbe` is a multi-threaded pentesting tool designed to assist in evaluating user privileges in web applications. It takes a user's session token and checks for a list of URLs if access is possible, highlighting potential authorization issues. `SessionProbe` deduplicates URL lists and provides real-time logging and progress tracking.
 
-`SessionProbe` is intended to be used with `Burp Suite's` "Copy URLs in this host" functionality in the `Target` tab. 
+`SessionProbe` is intended to be used with `Burp Suite's` "Copy URLs in this host" functionality in the `Target` tab (available in the free `Community Edition`). 
 
 # Built-in Help 🆘
 
@@ -28,6 +28,7 @@ Flags:
   -p, --proxy string     proxy URL (default: "")
   -t, --threads int      number of threads (default: 10) (default 10)
   -u, --urls string      file containing the URLs to be checked (required)
+  --skip-verification    ignore x509 certificate warnings (default: false)
 
 Examples:
     ./sessionprobe -u ./urls.txt --out ./unauthenticated-test.txt --threads 15

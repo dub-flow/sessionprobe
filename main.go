@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ var (
     threads int
     out     string
     proxy   string
+	skipVerification bool
     green   = color.New(color.FgGreen).SprintFunc()
     red     = color.New(color.FgRed).SprintFunc()
 )
@@ -46,6 +48,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 10, "number of threads (default: 10)")
 	rootCmd.PersistentFlags().StringVarP(&out, "out", "o", "output.txt", "output file (default: output.txt)")
 	rootCmd.PersistentFlags().StringVarP(&proxy, "proxy", "p", "", "proxy URL (default: \"\")")
+	rootCmd.PersistentFlags().BoolVar(&skipVerification, "skip-verification", false, "skip verification of SSL certificates")
 
 	rootCmd.Execute()
 }
@@ -232,28 +235,29 @@ func checkURL(url string, headers map[string]string, proxy string) (int, int64) 
 
 	var client *http.Client
 
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerification},
+	}
+
 	if proxy != "" {
 		// if a proxy was provided via `-proxy`.. Note that we already verified that the proxy is reachable at this point
 		proxyURL, _ := neturl.Parse(proxy)
-		client = &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyURL(proxyURL),
-			},
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-		}
-	} else {
-		// if no proxy was provided
-		client = &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-		}
+		tr.Proxy = http.ProxyURL(proxyURL)
+	}
+
+	client = &http.Client{
+		Transport: tr,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
+		if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") && !skipVerification {
+			Error("\"x509: certificate signed by unknown authority\" occurred. Please install the certificate of the proxy at OS-level or provide the --skip-verification flag")
+			os.Exit(1)
+		}
 		Error("Failed to make the request: %s", err)
 		return 0, 0
 	}
