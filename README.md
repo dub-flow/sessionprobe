@@ -24,9 +24,9 @@ Usage:
 Flags:
   -H, --headers string   HTTP headers to be used in the requests in the format "Key1:Value1;Key2:Value2;..."
   -h, --help             help for sessionprobe
-  -o, --out string       output file (default: output.txt) (default "output.txt")
+  -o, --out string       output file (default: output.txt)
   -p, --proxy string     proxy URL (default: "")
-  -t, --threads int      number of threads (default: 10) (default 10)
+  -t, --threads int      number of threads (default: 10)
   -u, --urls string      file containing the URLs to be checked (required)
   --skip-verification    ignore x509 certificate warnings (default: false)
 
