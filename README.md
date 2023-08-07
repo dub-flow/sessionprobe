@@ -42,9 +42,8 @@ Examples:
 # Run via Docker 🐳
 
 1. Navigate into the directory where your `URLs file` is.
-2. Usage: `docker run -it --rm -v "$(pwd):/app/files" --name sessionprobe fw10/sessionprobe -u /app/files/<name_of_urls_file> [other flags]`
-  - Note that we are mounting the current directory in. This means that your `URLs file` must be in the current directory.
-  - **Do NOT** provide the `--output flag` because it's already set to `/app/files/output.txt` (which maps to `./output.txt` outside of the docker container)
+2. Usage: `docker run -it --rm -v "$(pwd):/app/files" --name sessionprobe fw10/sessionprobe [flags]`
+  - Note that we are mounting the current directory in. This means that your `URLs file` must be in the current directory and your `output file` will also be in this directory
 
 # Example Output 📋
 

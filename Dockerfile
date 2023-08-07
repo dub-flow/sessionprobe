@@ -19,18 +19,16 @@ RUN CGO_ENABLED=0 go build -ldflags="-X main.AppVersion=$(cat VERSION) -s -w" -t
 # Second stage of multi-stage build: run the Go binary
 FROM alpine:latest
 
+# Create required directories and adjust working directory
+RUN mkdir /app /app/files
+WORKDIR /app/files
+
 # Running as a non-root user
 RUN adduser -D local
 USER local
 
-# Create directory for app
-WORKDIR /app
-
-# Create a separate directory for input and output files
-RUN mkdir /app/files
-
 # Copy binary from first stage
-COPY --from=builder /build/sessionprobe .
+COPY --from=builder /build/sessionprobe /app
 
 # This command runs the app
-ENTRYPOINT ["/app/sessionprobe", "-o", "/app/files/output.txt"]
+ENTRYPOINT ["/app/sessionprobe"]
