@@ -51,15 +51,19 @@ Examples:
 ```
 Responses with Status Code: 200
 
-https://<some-host>/<some-path> => Length: 12345
+https://example.com/<some-path> => Length: 12345
+https://example.com/<some-path> => Length: 40
 ...
 
 Responses with Status Code: 301
 
+https://example.com/<some-path> => Length: 890
+https://example.com/<some-path> => Length: 434
 ...
 
 Responses with Status Code: 302
 
+https://example.com/<some-path> => Length: 0
 ...
 
 Responses with Status Code: 404
