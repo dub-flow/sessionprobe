@@ -7,7 +7,7 @@ WORKDIR /build
 # Get the required files
 COPY go.mod .
 COPY go.sum .
-COPY *.go .
+COPY *.go ./
 COPY VERSION .
 
 # Download all dependencies
