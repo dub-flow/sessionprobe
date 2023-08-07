@@ -87,6 +87,14 @@ Responses with Status Code: 502
 - Proxy functionality to pass all requests e.g. through `Burp`
 - ...
 
+# Releases 🔑 
+
+- The `Releases` section contains some already compiled binaries for you so that you might not have to build the tool yourself
+- For the `Mac releases`, your Mac may throw a warning (`"cannot be opened because it is from an unidentified developer"`)
+    - To avoid this warning in the first place, you could simply build the app yourself (see `Setup`)
+    - Alternatively, you may - at your own risk - bypass this warning following the guidance here: https://support.apple.com/guide/mac-help/apple-cant-check-app-for-malicious-software-mchleab3a043/mac
+    - Afterwards, you can simply run the binary from the command line and provide the required flags
+
 # Bug Reports 🐞
 
 If you find a bug, please file an Issue right here in GitHub, and I will try to resolve it in a timely manner.
