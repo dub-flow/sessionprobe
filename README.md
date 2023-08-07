@@ -6,8 +6,6 @@
 
 `SessionProbe` is intended to be used with `Burp Suite's` "Copy URLs in this host" functionality in the `Target` tab. 
 
-![Screenshot of the 'Copy URLs in this host' feature in Burp](./images/burp-copy-urls.png)
-
 # Built-in Help 🆘
 
 Help is built-in!
