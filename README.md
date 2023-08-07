@@ -48,6 +48,15 @@ Examples:
 - You can build the tool yourself via `go build`
 - You can build the docker image yourself via `docker build . -t fw10/sessionprobe`
 
+# Features 🔎 
+
+- Test for authorization issues
+- Automatically dedupes URLs
+- Sorts the URLs by response status code and extension (e.g., `.css`, `.js`), and provides the length
+- Multi-threaded
+- Proxy functionality to pass all requests e.g. through `Burp`
+- ...
+
 # Example Output 📋
 
 ```
@@ -77,15 +86,6 @@ Responses with Status Code: 502
 ...
 
 ```
-
-# Features 🔎 
-
-- Test for authorization issues
-- Automatically dedupes URLs
-- Sorts the URLs by response status code and extension (e.g., `.css`, `.js`), and provides the length
-- Multi-threaded
-- Proxy functionality to pass all requests e.g. through `Burp`
-- ...
 
 # Releases 🔑 
 
