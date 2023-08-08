@@ -91,7 +91,7 @@ func run(cmd *cobra.Command, args []string) {
 	// total number of URLs
 	urlCount := len(urlsMap)
 
-	Info("Starting to check %d URLs with %d threads", urlCount, threads)
+	Info("Starting to check %d URLs (deduplicated) with %d threads", urlCount, threads)
 
 	// map to store URLs by status code
 	urlStatuses := processURLs(urlsMap, headersMap, &proxy, &wg, sem)
