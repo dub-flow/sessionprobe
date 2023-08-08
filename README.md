@@ -26,9 +26,9 @@ Usage:
 Flags:
   -H, --headers string   HTTP headers to be used in the requests in the format "Key1:Value1;Key2:Value2;..."
   -h, --help             help for sessionprobe
-  -o, --out string       output file (default: output.txt) (default "output.txt")
+  -o, --out string       output file (default: output.txt)
   -p, --proxy string     proxy URL (default: "")
-  -t, --threads int      number of threads (default: 10) (default 10)
+  -t, --threads int      number of threads (default: 10)
   -u, --urls string      file containing the URLs to be checked (required)
   --skip-verification    ignore x509 certificate warnings (default: false)
 
@@ -49,6 +49,15 @@ Examples:
 - You can simply run this tool from source via `go run .` 
 - You can build the tool yourself via `go build`
 - You can build the docker image yourself via `docker build . -t fw10/sessionprobe`
+
+# Features 🔎 
+
+- Test for authorization issues
+- Automatically dedupes URLs
+- Sorts the URLs by response status code and extension (e.g., `.css`, `.js`), and provides the length
+- Multi-threaded
+- Proxy functionality to pass all requests e.g. through `Burp`
+- ...
 
 # Example Output 📋
 
@@ -80,14 +89,13 @@ Responses with Status Code: 502
 
 ```
 
-# Features 🔎 
+# Releases 🔑 
 
-- Test for authorization issues
-- Automatically dedupes URLs
-- Sorts the URLs by response status code and extension (e.g., `.css`, `.js`), and provides the length
-- Multi-threaded
-- Proxy functionality to pass all requests e.g. through `Burp`
-- ...
+- The `Releases` section contains some already compiled binaries for you so that you might not have to build the tool yourself
+- For the `Mac releases`, your Mac may throw a warning (`"cannot be opened because it is from an unidentified developer"`)
+    - To avoid this warning in the first place, you could simply build the app yourself (see `Setup`)
+    - Alternatively, you may - at your own risk - bypass this warning following the guidance here: https://support.apple.com/guide/mac-help/apple-cant-check-app-for-malicious-software-mchleab3a043/mac
+    - Afterwards, you can simply run the binary from the command line and provide the required flags
 
 # Bug Reports 🐞
 
