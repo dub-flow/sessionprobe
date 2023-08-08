@@ -4,3 +4,5 @@
 * Make this a Burp extension?!
 
 * Support not only GET but POST/PATCH/PUT/DELETE
+
+* Feature to find potentially interesting outliers where response code is not 200
