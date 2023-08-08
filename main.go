@@ -12,7 +12,6 @@ import (
 	"net"
 	neturl "net/url"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -185,9 +184,19 @@ func writeToFile(urlStatuses map[int][]string, outFile *os.File) {
 			Error("%s", err)
 		}
 
-		// sort URLs by extension for each status code
+		// sort URLs by their path for each status code
 		sort.Slice(urlStatuses[statusCode], func(i, j int) bool {
-			return filepath.Ext(urlStatuses[statusCode][i]) < filepath.Ext(urlStatuses[statusCode][j])
+			// extracting the path from the URL string, which follows the format "URL => Length: x"
+			urlI, errI := neturl.Parse(strings.Split(urlStatuses[statusCode][i], " ")[0])
+			urlJ, errJ := neturl.Parse(strings.Split(urlStatuses[statusCode][j], " ")[0])
+
+			// if there's an error parsing the URL, return false so the order doesn't change
+			if errI != nil || errJ != nil {
+				return false
+			}
+
+			// Compare the path of the URLs
+			return urlI.Path < urlJ.Path
 		})
 
 		for _, url := range urlStatuses[statusCode] {
