@@ -9,7 +9,7 @@
 
 `SessionProbe` is intended to be used with `Burp Suite's` "Copy URLs in this host" functionality in the `Target` tab (available in the free `Community Edition`). 
 
-`Note`: You may want to change the `filter` in `Burps's` `Target` tab to include files or images. Otherwise, these `URLs` would not be copied by "Copy URLs in this host" and would not be tested by `SessionProbe`.
+**Note**: You may want to change the `filter` in `Burps's` `Target` tab to include files or images. Otherwise, these `URLs` would not be copied by "Copy URLs in this host" and would not be tested by `SessionProbe`.
 
 # Built-in Help 🆘
 
