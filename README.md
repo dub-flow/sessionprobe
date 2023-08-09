@@ -41,7 +41,10 @@ Examples:
 # Run via Docker 🐳
 
 1. Navigate into the directory where your `URLs file` is.
-2. Usage: `docker run -it --rm -v "$(pwd):/app/files" --name sessionprobe fw10/sessionprobe [flags]`
+2. Run the below command:
+```text
+docker run -it --rm -v "$(pwd):/app/files" --name sessionprobe fw10/sessionprobe [flags]
+```
   - Note that we are mounting the current directory in. This means that your `URLs file` must be in the current directory and your `output file` will also be in this directory.
   - Also remember to have a `Burp listener` run on all interfaces if you want to use the `--proxy` option
 
