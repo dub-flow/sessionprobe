@@ -3,6 +3,8 @@
 
 * Make this a Burp extension?!
 
-* Support not only GET but POST/PATCH/PUT/DELETE
+* Support not only GET but POST/PATCH/PUT/DELETE -> Not sure how though yet
 
 * Feature to find potentially interesting outliers where response code is not 200
+
+* Allow parsing in a swagger file instead of the urls file
