@@ -72,7 +72,7 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if ignoreCSS {
-		Info("Ignoring URLs that end with  .css")
+		Info("Ignoring URLs that end with .css")
 	}
 
 	if ignoreJS {
