@@ -24,13 +24,15 @@ Usage:
     sessionprobe [flags]
 
 Flags:
-  -H, --headers string   HTTP headers to be used in the requests in the format "Key1:Value1;Key2:Value2;..."
-  -h, --help             help for sessionprobe
-  -o, --out string       output file (default: output.txt)
-  -p, --proxy string     proxy URL (default: "")
-  -t, --threads int      number of threads (default: 10)
-  -u, --urls string      file containing the URLs to be checked (required)
-  --skip-verification    ignore x509 certificate warnings (default: false)
+  -u, --urls string         file containing the URLs to be checked (required)
+  -H, --headers string      HTTP headers to be used in the requests in the format "Key1:Value1;Key2:Value2;..."
+  -h, --help                help for sessionprobe
+      --ignore-css          ignore URLs ending with .css (default true)
+      --ignore-js           ignore URLs ending with .js (default true)
+  -o, --out string          output file (default "output.txt")
+  -p, --proxy string        proxy URL (default: "")
+      --skip-verification   skip verification of SSL certificates (default false)
+  -t, --threads int         number of threads (default 10)
 
 Examples:
     ./sessionprobe -u ./urls.txt --out ./unauthenticated-test.txt --threads 15

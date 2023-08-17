@@ -27,6 +27,8 @@ var (
     out     string
     proxy   string
 	skipVerification bool
+	ignoreCSS bool
+	ignoreJS  bool
     green   = color.New(color.FgGreen).SprintFunc()
     red     = color.New(color.FgRed).SprintFunc()
 )
@@ -44,11 +46,13 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVarP(&headers, "headers", "H", "", "HTTP headers to be used in the requests in the format \"Key1:Value1;Key2:Value2;...\"")
 	rootCmd.PersistentFlags().StringVarP(&urls, "urls", "u", "", "file containing the URLs to be checked (required)")
-	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 10, "number of threads (default: 10)")
-	rootCmd.PersistentFlags().StringVarP(&out, "out", "o", "output.txt", "output file (default: output.txt)")
+	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 10, "number of threads")
+	rootCmd.PersistentFlags().StringVarP(&out, "out", "o", "output.txt", "output file")
 	rootCmd.PersistentFlags().StringVarP(&proxy, "proxy", "p", "", "proxy URL (default: \"\")")
-	rootCmd.PersistentFlags().BoolVar(&skipVerification, "skip-verification", false, "skip verification of SSL certificates")
-
+	rootCmd.PersistentFlags().BoolVar(&skipVerification, "skip-verification", false, "skip verification of SSL certificates (default false)")
+	rootCmd.PersistentFlags().BoolVar(&ignoreCSS, "ignore-css", true, "ignore URLs ending with .css")
+	rootCmd.PersistentFlags().BoolVar(&ignoreJS, "ignore-js", true, "ignore URLs ending with .js")
+	
 	rootCmd.Execute()
 }
 
@@ -118,22 +122,29 @@ func printIntro() {
 }
 
 func readURLs(file *os.File) map[string]bool {
-	// read the URLs line by line
-	scanner := bufio.NewScanner(file)
+    // read the URLs line by line
+    scanner := bufio.NewScanner(file)
 
-	// deduplicate URLs
-	urls := make(map[string]bool)
-	for scanner.Scan() {
-		url := scanner.Text()
-		urls[url] = true
-	}
+    // deduplicate URLs
+    urls := make(map[string]bool)
+    for scanner.Scan() {
+        url := scanner.Text()
 
-	if scanner.Err() != nil {
-		Error("%s", scanner.Err())
-	}
+        if (ignoreCSS && strings.HasSuffix(url, ".css")) || 
+           (ignoreJS && strings.HasSuffix(url, ".js")) {
+            continue
+        }
 
-	return urls
+        urls[url] = true
+    }
+
+    if scanner.Err() != nil {
+        Error("%s", scanner.Err())
+    }
+
+    return urls
 }
+
 
 func processURLs(urls map[string]bool, headers map[string]string, proxyPtr *string, wg *sync.WaitGroup, sem chan bool) map[int][]string {
 	// map to store URLs by status code
