@@ -60,11 +60,23 @@ func main() {
 func run(cmd *cobra.Command, args []string) {
 	printIntro()
 
+	// check if the AppVersion was already set during compilation - otherwise manually get it from `./current_version`
+	CheckAppVersion()
+	color.Yellow("Current version: %s\n\n", AppVersion)
+
 	// the `urls` flag is required
 	if urls == "" {
 		Error("Please provide a URLs file using the '-urls <path_to_urls_file>' argument.")
 		Error("Use --help for more information.")
 		return
+	}
+
+	if ignoreCSS {
+		Info("Ignoring URLs that end with  .css")
+	}
+
+	if ignoreJS {
+		Info("Ignoring URLs that end with .js")
 	}
 
 	var headersMap map[string]string
