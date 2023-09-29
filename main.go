@@ -55,7 +55,7 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&skipVerification, "skip-verification", false, "skip verification of SSL certificates (default false)")
 	rootCmd.PersistentFlags().BoolVar(&ignoreCSS, "ignore-css", true, "ignore URLs ending with .css")
 	rootCmd.PersistentFlags().BoolVar(&ignoreJS, "ignore-js", true, "ignore URLs ending with .js")
-	rootCmd.PersistentFlags().StringVarP(&filterRegex, "filter-regex", "f", "", "Filter HTTP responses using this regex. Responses matching this regex will not be part of the output.")
+	rootCmd.PersistentFlags().StringVarP(&filterRegex, "filter-regex", "r", "", "Filter HTTP responses using this regex. Responses matching this regex will not be part of the output.")
 
 	rootCmd.Execute()
 }
