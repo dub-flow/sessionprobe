@@ -43,7 +43,8 @@ func main() {
 		Example: `./sessionprobe -u ./urls.txt
 ./sessionprobe -u ./urls.txt --out ./unauthenticated-test.txt
 ./sessionprobe -u ./urls.txt --threads 15 -H "Cookie: .AspNetCore.Cookies=<cookie>" -o ./output.txt
-./sessionprobe -u ./urls.txt -H "Authorization: Bearer <token>" --proxy http://localhost:8080`,
+./sessionprobe -u ./urls.txt -H "Authorization: Bearer <token>" --proxy http://localhost:8080
+./sessionprobe -u ./urls.txt -r "Page Not Found"`,
 		Run:   run,
 	}
 
