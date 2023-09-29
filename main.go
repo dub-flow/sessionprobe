@@ -12,6 +12,7 @@ import (
 	"net"
 	neturl "net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -27,6 +28,7 @@ var (
     out     string
     proxy   string
 	skipVerification bool
+	filterRegex string
 	ignoreCSS bool
 	ignoreJS  bool
     green   = color.New(color.FgGreen).SprintFunc()
@@ -53,7 +55,8 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&skipVerification, "skip-verification", false, "skip verification of SSL certificates (default false)")
 	rootCmd.PersistentFlags().BoolVar(&ignoreCSS, "ignore-css", true, "ignore URLs ending with .css")
 	rootCmd.PersistentFlags().BoolVar(&ignoreJS, "ignore-js", true, "ignore URLs ending with .js")
-	
+	rootCmd.PersistentFlags().StringVarP(&filterRegex, "filter-regex", "f", "", "Filter HTTP responses using this regex. Responses matching this regex will not be part of the output.")
+
 	rootCmd.Execute()
 }
 
@@ -90,6 +93,17 @@ func run(cmd *cobra.Command, args []string) {
 		checkProxyReachability(proxy)
 	}
 
+	// compile the regex provided via `-fr`
+	var compiledRegex *regexp.Regexp
+	if filterRegex != "" {
+		var err error
+		compiledRegex, err = regexp.Compile(filterRegex)
+		if err != nil {
+			Error("Invalid regex: %s", err)
+			return
+		}
+	}
+
 	file, err := os.Open(urls)
 	if err != nil {
 		Error("%s", err)
@@ -111,7 +125,7 @@ func run(cmd *cobra.Command, args []string) {
 	Info("Starting to check %d URLs (deduplicated) with %d threads", urlCount, threads)
 
 	// map to store URLs by status code
-	urlStatuses := processURLs(urlsMap, headersMap, &proxy, &wg, sem)
+	urlStatuses := processURLs(urlsMap, headersMap, &proxy, &wg, sem, compiledRegex)
 
 	// wait for all threads to finish
 	wg.Wait()
@@ -159,8 +173,8 @@ func readURLs(file *os.File) map[string]bool {
 }
 
 
-func processURLs(urls map[string]bool, headers map[string]string, proxyPtr *string, wg *sync.WaitGroup, sem chan bool) map[int][]string {
-	// map to store URLs by status code
+func processURLs(urls map[string]bool, headers map[string]string, proxyPtr *string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp) map[int][]string {
+    // map to store URLs by status code
 	urlStatuses := make(map[int][]string)
 	var urlStatusesMutex sync.Mutex
 
@@ -174,7 +188,13 @@ func processURLs(urls map[string]bool, headers map[string]string, proxyPtr *stri
 		// launch a new goroutine for each URL
 		go func(url string) {
 			defer wg.Done()
-			statusCode, length := checkURL(url, headers, *proxyPtr)
+			statusCode, length, isMatched := checkURL(url, headers, *proxyPtr, compiledRegex)
+
+			// don't add the URL to the output if it matches the regex filter
+			if isMatched {
+				return
+			}
+
 			// add URL to status code map
 			urlStatusesMutex.Lock()
 			urlStatuses[statusCode] = append(urlStatuses[statusCode], fmt.Sprintf("%s => Length: %d", url, length))
@@ -255,11 +275,11 @@ func parseHeaders(headers string) map[string]string {
 }
 
 // function to do the HTTP request and check the response's status code and response length
-func checkURL(url string, headers map[string]string, proxy string) (int, int64) {
+func checkURL(url string, headers map[string]string, proxy string, compiledRegex *regexp.Regexp) (int, int64, bool) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		Error("%s", err)
-		return 0, 0
+		return 0, 0, false
 	}
 
 	for key, value := range headers {
@@ -292,17 +312,22 @@ func checkURL(url string, headers map[string]string, proxy string) (int, int64) 
 			os.Exit(1)
 		}
 		Error("Failed to make the request: %s", err)
-		return 0, 0
+		return 0, 0, false
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		Error("Failed to read the response: %s", err)
-		return resp.StatusCode, 0
+		return resp.StatusCode, 0, false
 	}
 
-	return resp.StatusCode, int64(len(body))
+    // match the response against the regex filter if provided
+    if compiledRegex != nil && compiledRegex.Match(body) {
+        return resp.StatusCode, int64(len(body)), true
+    }
+
+	return resp.StatusCode, int64(len(body)), false
 }
 
 func checkProxyReachability(proxy string) {
