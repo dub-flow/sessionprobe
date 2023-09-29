@@ -126,7 +126,7 @@ func run(cmd *cobra.Command, args []string) {
 	Info("Starting to check %d URLs (deduplicated) with %d threads", urlCount, threads)
 
 	// map to store URLs by status code
-	urlStatuses := processURLs(urlsMap, headersMap, &proxy, &wg, sem, compiledRegex)
+	urlStatuses := processURLs(urlsMap, headersMap, proxy, &wg, sem, compiledRegex)
 
 	// wait for all threads to finish
 	wg.Wait()
@@ -173,88 +173,70 @@ func readURLs(file *os.File) map[string]bool {
     return urls
 }
 
-
-func processURLs(urls map[string]bool, headers map[string]string, proxyPtr *string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp) map[int][]string {
+func processURLs(urls map[string]bool, headers map[string]string, proxy string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp) map[int][]string {
     // map to store URLs by status code
 	urlStatuses := make(map[int][]string)
 	var urlStatusesMutex sync.Mutex
+
+	// for the progress counter
+	var processedCount int32
+	totalUrls := int32(len(urls))
+
 
 	// process each URL in the deduplicated map
 	for url := range urls {
 		wg.Add(1)
 
-		// will block if there is already `*threadPtr` threads running
+		// will block if there is already `threads` threads running
 		sem <- true
 
 		// launch a new goroutine for each URL
 		go func(url string) {
-			defer wg.Done()
-			statusCode, length, isMatched := checkURL(url, headers, *proxyPtr, compiledRegex)
+			// using defer to ensure the semaphore is released and the waitgroup is decremented regardless of where we exit in the function
+			defer func() {
+				// always release the semaphore token
+				<-sem
+				// always decrement the waitgroup counter
+				wg.Done()
 
-			// don't add the URL to the output if it matches the regex filter
-			if isMatched {
-				return
+				// increment the processedCount and log progress
+				atomic.AddInt32(&processedCount, 1)
+				percentage := float64(processedCount) / float64(totalUrls) * 100
+				Info("Progress: %.2f%% (%d/%d URLs processed)", percentage, processedCount, totalUrls)
+			}()
+		
+			// Now use checkURL function instead of http.Get
+			statusCode, _, matched := checkURL(url, headers, proxy, compiledRegex)
+			if matched {
+				urlStatusesMutex.Lock()
+				urlStatuses[statusCode] = append(urlStatuses[statusCode], url)
+				urlStatusesMutex.Unlock()
 			}
-
-			// add URL to status code map
-			urlStatusesMutex.Lock()
-			urlStatuses[statusCode] = append(urlStatuses[statusCode], fmt.Sprintf("%s => Length: %d", url, length))
-			urlStatusesMutex.Unlock()
-
-			// removing a slot in the semaphore so that a new goroutine can be created
-			<-sem
-
-			// increment the global counter
-			atomic.AddInt32(&counter, 1)
-			Info("Progress: %.2f%%", float64(counter)/float64(len(urls))*100)
 		}(url)
 	}
 
 	return urlStatuses
 }
 
+// takes a map of HTTP status codes to URLs and writes it to the output file
 func writeToFile(urlStatuses map[int][]string, outFile *os.File) {
-	// get the list of status codes
-	statusCodes := make([]int, 0, len(urlStatuses))
-	for statusCode := range urlStatuses {
-		statusCodes = append(statusCodes, statusCode)
-	}
-	// sort the status codes
-	sort.Ints(statusCodes)
+    writer := bufio.NewWriter(outFile)
 
-	// write output to file, sorted by status code
-	for _, statusCode := range statusCodes {
-		_, err := outFile.WriteString(fmt.Sprintf("Responses with Status Code: %d\n\n", statusCode))
-		if err != nil {
-			Error("%s", err)
-		}
+    // sort the map keys to ensure consistent output
+    var keys []int
+    for k := range urlStatuses {
+        keys = append(keys, k)
+    }
+    sort.Ints(keys)
 
-		// sort URLs by their path for each status code
-		sort.Slice(urlStatuses[statusCode], func(i, j int) bool {
-			// extracting the path from the URL string, which follows the format "URL => Length: x"
-			urlI, errI := neturl.Parse(strings.Split(urlStatuses[statusCode][i], " ")[0])
-			urlJ, errJ := neturl.Parse(strings.Split(urlStatuses[statusCode][j], " ")[0])
-
-			// if there's an error parsing the URL, return false so the order doesn't change
-			if errI != nil || errJ != nil {
-				return false
-			}
-
-			// Compare the path of the URLs
-			return urlI.Path < urlJ.Path
-		})
-
-		for _, url := range urlStatuses[statusCode] {
-			_, err = outFile.WriteString(fmt.Sprintf("%s\n", url))
-			if err != nil {
-				Error("%s", err)
-			}
-		}
-		_, err = outFile.WriteString("\n")
-		if err != nil {
-			Error("%s", err)
-		}
-	}
+    for _, k := range keys {
+        _, _ = writer.WriteString(fmt.Sprintf("HTTP Status: %d\n", k))
+        for _, url := range urlStatuses[k] {
+            _, _ = writer.WriteString(url + "\n")
+        }
+        _, _ = writer.WriteString("\n")
+    }
+    writer.Flush()
 }
 
 func parseHeaders(headers string) map[string]string {
@@ -276,59 +258,106 @@ func parseHeaders(headers string) map[string]string {
 }
 
 // function to do the HTTP request and check the response's status code and response length
-func checkURL(url string, headers map[string]string, proxy string, compiledRegex *regexp.Regexp) (int, int64, bool) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		Error("%s", err)
-		return 0, 0, false
-	}
-
-	for key, value := range headers {
-		req.Header.Add(key, value)
-	}
-
-	var client *http.Client
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerification},
-	}
-
-	if proxy != "" {
-		// if a proxy was provided via `-proxy`.. Note that we already verified that the proxy is reachable at this point
-		proxyURL, _ := neturl.Parse(proxy)
-		tr.Proxy = http.ProxyURL(proxyURL)
-	}
-
-	client = &http.Client{
-		Transport: tr,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") && !skipVerification {
-			Error("\"x509: certificate signed by unknown authority\" occurred. Please install the certificate of the proxy at OS-level or provide the --skip-verification flag")
-			os.Exit(1)
-		}
-		Error("Failed to make the request: %s", err)
-		return 0, 0, false
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		Error("Failed to read the response: %s", err)
-		return resp.StatusCode, 0, false
-	}
-
-    // match the response against the regex filter if provided
-    if compiledRegex != nil && compiledRegex.Match(body) {
-        return resp.StatusCode, int64(len(body)), true
+func checkURL(url string, headers map[string]string, proxy string, compiledRegex *regexp.Regexp) (int, int, bool) {
+	client := createHTTPClient(proxy) 
+    req, err := prepareHTTPRequest(url, headers)
+    
+    if err != nil {
+        Error("Failed to create request: %s", err)
+        return 0, 0, false
     }
 
-	return resp.StatusCode, int64(len(body)), false
+    resp, err := client.Do(req)
+    if handleHTTPError(err, url) {
+        return 0, 0, false
+    }
+    defer resp.Body.Close()
+
+    bodyBytes, err := readResponseBody(resp.Body, url)
+    if err != nil {
+        return resp.StatusCode, 0, false
+    }
+
+    // if a regex pattern is provided, check if the response matches
+    return processResponse(resp.StatusCode, bodyBytes, compiledRegex)
+}
+
+// setting up the HTTP client with potential proxy and other configurations
+// setting up the HTTP client with potential proxy and other configurations
+func createHTTPClient(proxy string) *http.Client {
+	proxyURLFunc := func(_ *http.Request) (*neturl.URL, error) {
+		return neturl.Parse(proxy)
+	}
+	
+	if proxy == "" {
+		proxyURLFunc = http.ProxyFromEnvironment
+	}
+	
+    return &http.Client{
+        Transport: &http.Transport{
+            Proxy: proxyURLFunc,
+            TLSClientConfig: &tls.Config{
+                // skip SSL verification if specified
+                InsecureSkipVerify: skipVerification,
+            },
+        },
+        Timeout: 10 * time.Second, // set timeout for HTTP requests
+    }
+}
+
+// create a new HTTP request and set the provided headers
+func prepareHTTPRequest(url string, headers map[string]string) (*http.Request, error) {
+    req, err := http.NewRequest("GET", url, nil)
+    if err != nil {
+        return nil, err
+    }
+
+    // add custom headers to the request if any provided
+    for key, value := range headers {
+        req.Header.Set(key, value)
+    }
+
+    return req, nil
+}
+
+func handleHTTPError(err error, url string) bool {
+    if err != nil {
+        if _, ok := err.(net.Error); ok {
+			// log network errors separately
+            Error("Network error for URL: %s - %s", url, err) 
+            return true
+        }
+		// log other errors
+        Error("Error fetching URL: %s - %s", url, err) 
+        return true
+    }
+    return false
+}
+
+func readResponseBody(body io.ReadCloser, url string) ([]byte, error) {
+    bodyBytes, err := io.ReadAll(body)
+    if err != nil {
+        Error("Error reading response body for URL: %s - %s", url, err) 
+        return nil, err
+    }
+    return bodyBytes, nil
+}
+
+func processResponse(statusCode int, bodyBytes []byte, compiledRegex *regexp.Regexp) (int, int, bool) {
+    if compiledRegex != nil && compiledRegex.Match(bodyBytes) {
+        return statusCode, len(bodyBytes), true
+    }
+    return statusCode, len(bodyBytes), false
+}
+
+// safely checks and adds URLs to the statusMap
+func checkAndAddToMap(statusCode int, url string, statusMap map[int][]string, mutex *sync.Mutex) {
+    // lock the statusMap to prevent concurrent writes
+    mutex.Lock()
+    defer mutex.Unlock() // ensure unlocking once operation is complete
+
+    // add URL under its corresponding status code
+    statusMap[statusCode] = append(statusMap[statusCode], url)
 }
 
 func checkProxyReachability(proxy string) {
