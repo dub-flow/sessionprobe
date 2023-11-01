@@ -354,6 +354,12 @@ func handleHTTPError(err error, url string) bool {
         if _, ok := err.(net.Error); ok {
 			// log network errors separately
             Error("Network error for URL: %s - %s", url, err) 
+			
+			// provide a hint for the 'x509: certificate signed by unknown authority' error
+			if strings.Contains(err.Error(), "x509") {
+				Error("You may be able to fix the x509 certificate error by providing the --skip-verification flag") 
+			}
+			
             return true
         }
 		// log other errors
@@ -404,6 +410,7 @@ func checkProxyReachability(proxy string) {
 		_, err = net.DialTimeout("tcp", proxyURL.Host, 5*time.Second)
 		if err != nil {
 			Error("Failed to connect to the proxy: %s", err)
+			Error("In case you're using docker to run the app, remember that you can't refer to the proxy as 'localhost' but need its IP :)")
 			os.Exit(1)
 		}
 	}
