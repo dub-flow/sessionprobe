@@ -31,7 +31,7 @@ Flags:
       --ignore-js             ignore URLs ending with .js (default true)
   -o, --out string            output file (default "output.txt")
   -p, --proxy string          proxy URL (default: "")
-  -r, --filter-regex string   Filter HTTP responses using this regex. Responses matching this regex will not be part of the output.   
+  -r, --filter-regex string   Filter HTTP responses using this regex. Responses whose body matches this regex will not be part of the output.   
       --skip-verification     skip verification of SSL certificates (default false)
   -t, --threads int           number of threads (default 10)
 

@@ -60,7 +60,7 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&skipVerification, "skip-verification", false, "skip verification of SSL certificates (default false)")
 	rootCmd.PersistentFlags().BoolVar(&ignoreCSS, "ignore-css", true, "ignore URLs ending with .css")
 	rootCmd.PersistentFlags().BoolVar(&ignoreJS, "ignore-js", true, "ignore URLs ending with .js")
-	rootCmd.PersistentFlags().StringVarP(&filterRegex, "filter-regex", "r", "", "Filter HTTP responses using this regex. Responses matching this regex will not be part of the output.")
+	rootCmd.PersistentFlags().StringVarP(&filterRegex, "filter-regex", "r", "", "Filter HTTP responses using this regex. Responses whose body matches this regex will not be part of the output.")
 
 	rootCmd.Execute()
 }
@@ -353,11 +353,11 @@ func filterResponseByRegex(statusCode int, bodyBytes []byte, compiledRegex *rege
         return statusCode, len(bodyBytes), true
     }
     
-    // if a regex is provided, only return true if the response matches the regex
-    if compiledRegex.Match(bodyBytes) {
-        return statusCode, len(bodyBytes), true
-    }
-    
+	// if a regex is provided, only return true if the response does NOT match the regex
+	if !compiledRegex.Match(bodyBytes) {
+		return statusCode, len(bodyBytes), true
+	}
+		
     return statusCode, len(bodyBytes), false
 }
 

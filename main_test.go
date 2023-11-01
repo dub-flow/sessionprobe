@@ -72,7 +72,7 @@ func TestFilterRegexFunctionality(t *testing.T) {
 			fmt.Fprintln(w, "This should be included.")
 		case "/shouldExclude":
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, "This should be excluded.")
+			fmt.Fprintln(w, "This should not be included.")
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -100,7 +100,7 @@ func TestFilterRegexFunctionality(t *testing.T) {
 
 	// 2. Use go run main.go with filter-regex to probe the mock server.
 	outputFile := filepath.Join(".", "test-output", "test-output-regex.txt")
-	cmd := exec.Command("go", "run", ".", "-u", urlsFilePath, "-o", outputFile, "--filter-regex", "This should be included.")
+	cmd := exec.Command("go", "run", ".", "-u", urlsFilePath, "-o", outputFile, "--filter-regex", "This should not be included.")
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
