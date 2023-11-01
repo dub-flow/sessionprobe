@@ -20,7 +20,6 @@ import (
 	"time"
 )
 
-var counter int32
 var (
     headers string
     urls    string
@@ -348,16 +347,6 @@ func processResponse(statusCode int, bodyBytes []byte, compiledRegex *regexp.Reg
         return statusCode, len(bodyBytes), true
     }
     return statusCode, len(bodyBytes), false
-}
-
-// safely checks and adds URLs to the statusMap
-func checkAndAddToMap(statusCode int, url string, statusMap map[int][]string, mutex *sync.Mutex) {
-    // lock the statusMap to prevent concurrent writes
-    mutex.Lock()
-    defer mutex.Unlock() // ensure unlocking once operation is complete
-
-    // add URL under its corresponding status code
-    statusMap[statusCode] = append(statusMap[statusCode], url)
 }
 
 func checkProxyReachability(proxy string) {
