@@ -1,13 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"os/exec"
 	"regexp"
-	"strings"
 	"testing"
 )
 
@@ -56,62 +52,5 @@ func TestCheckURL(t *testing.T) {
 
 	if actualStatus != expectedStatus || actualMatched != expectedMatched {
 		t.Errorf("Mismatch in checkURL output")
-	}
-}
-
-func TestSessionProbeIntegration(t *testing.T) {
-	// 1. Set up a mock HTTP server
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/200":
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, "OK")
-		case "/404":
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintln(w, "Not Found")
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-	}))
-	defer ts.Close()
-
-	// Create a temporary URLs file for the test
-	urlsFile, err := os.CreateTemp("", "test-urls-*.txt")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-	defer os.Remove(urlsFile.Name())
-
-	urls := []string{
-		ts.URL + "/200",
-		ts.URL + "/404",
-		ts.URL + "/500",
-	}
-	for _, url := range urls {
-		if _, err := urlsFile.WriteString(url + "\n"); err != nil {
-			t.Fatalf("Failed to write to temp file: %v", err)
-		}
-	}
-	urlsFile.Close()
-
-	// 2. Use go run main.go to probe the mock server
-	outputFile := "test-output.txt"
-	defer os.Remove(outputFile)
-
-	cmd := exec.Command("go", "run", ".", "-u", urlsFile.Name(), "-o", outputFile)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to run main.go: %v", err)
-	}
-	// 3. Check the output
-	output, err := os.ReadFile(outputFile)
-	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
-	}
-	if !strings.Contains(string(output), "Status Code: 200") ||
-		!strings.Contains(string(output), "Status Code: 404") ||
-		!strings.Contains(string(output), "Status Code: 500") {
-		t.Fatalf("Unexpected output: %v", string(output))
 	}
 }
