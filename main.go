@@ -4,20 +4,22 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"io"
 	"log"
-	"net/http"
 	"net"
+	"net/http"
 	neturl "net/url"
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -28,6 +30,7 @@ var (
     proxy   string
 	skipVerification bool
 	filterRegex string
+	filterLengths string
 	ignoreCSS bool
 	ignoreJS  bool
     green   = color.New(color.FgGreen).SprintFunc()
@@ -61,6 +64,7 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&ignoreCSS, "ignore-css", true, "ignore URLs ending with .css")
 	rootCmd.PersistentFlags().BoolVar(&ignoreJS, "ignore-js", true, "ignore URLs ending with .js")
 	rootCmd.PersistentFlags().StringVarP(&filterRegex, "filter-regex", "r", "", "Filter HTTP responses using this regex. Responses whose body matches this regex will not be part of the output.")
+	rootCmd.PersistentFlags().StringVarP(&filterLengths, "filter-lengths", "l", "", "Filter HTTP responses by body length. You can specify lengths separated by commas (e.g., \"123,456,789\").")
 
 	rootCmd.Execute()
 }
@@ -130,7 +134,9 @@ func run(cmd *cobra.Command, args []string) {
 	Info("Starting to check %d URLs (deduplicated) with %d threads", urlCount, threads)
 
 	// map to store URLs by status code
-	urlStatuses := processURLs(urlsMap, headersMap, proxy, &wg, sem, compiledRegex)
+	excludedLengths := parseLengths(filterLengths)
+	urlStatuses := processURLs(urlsMap, headersMap, proxy, &wg, sem, compiledRegex, excludedLengths)
+	
 
 	// wait for all threads to finish
 	wg.Wait()
@@ -177,7 +183,7 @@ func readURLs(file *os.File) map[string]bool {
     return urls
 }
 
-func processURLs(urls map[string]bool, headers map[string]string, proxy string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp) map[int][]Result {
+func processURLs(urls map[string]bool, headers map[string]string, proxy string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp, allowedLengths map[int]bool) map[int][]Result {
 	// map to store URLs by status code
 	urlStatuses := make(map[int][]Result)
 	var urlStatusesMutex sync.Mutex
@@ -209,7 +215,7 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 			}()
 		
 			// inside the goroutine of processURLs
-			statusCode, length, matched := checkURL(url, headers, proxy, compiledRegex)
+			statusCode, length, matched := checkURL(url, headers, proxy, compiledRegex, allowedLengths)
 			if matched {
 				urlStatusesMutex.Lock()
 				urlStatuses[statusCode] = append(urlStatuses[statusCode], Result{URL: url, Length: length})
@@ -243,6 +249,25 @@ func writeToFile(urlStatuses map[int][]Result, outFile *os.File) {
     writer.Flush()
 }
 
+func parseLengths(lengths string) map[int]bool {
+	lengthsMap := make(map[int]bool)
+
+	// if the input string is empty (i.e. `-l` was not provided), return an empty map
+	if lengths == "" {
+		return lengthsMap
+	}
+
+	parts := strings.Split(lengths, ",")
+	for _, part := range parts {
+		length, err := strconv.Atoi(strings.TrimSpace(part))
+		if err != nil {
+			Error("Invalid length: %s", part)
+			continue
+		}
+		lengthsMap[length] = true
+	}
+	return lengthsMap
+}
 
 func parseHeaders(headers string) map[string]string {
 	headerMap := make(map[string]string)
@@ -263,7 +288,7 @@ func parseHeaders(headers string) map[string]string {
 }
 
 // function to do the HTTP request and check the response's status code and response length
-func checkURL(url string, headers map[string]string, proxy string, compiledRegex *regexp.Regexp) (int, int, bool) {
+func checkURL(url string, headers map[string]string, proxy string, compiledRegex *regexp.Regexp, allowedLengths map[int]bool) (int, int, bool) {
 	client := createHTTPClient(proxy) 
     req, err := prepareHTTPRequest(url, headers)
     
@@ -284,7 +309,7 @@ func checkURL(url string, headers map[string]string, proxy string, compiledRegex
     }
 
     // if a regex pattern is provided, check if the response matches
-    return filterResponseByRegex(resp.StatusCode, bodyBytes, compiledRegex)
+	return filterResponseByLengthAndRegex(resp.StatusCode, bodyBytes, compiledRegex, allowedLengths)
 }
 
 // setting up the HTTP client with potential proxy and other configurations
@@ -347,18 +372,25 @@ func readResponseBody(body io.ReadCloser, url string) ([]byte, error) {
     return bodyBytes, nil
 }
 
-func filterResponseByRegex(statusCode int, bodyBytes []byte, compiledRegex *regexp.Regexp) (int, int, bool) {
-    // if there's no regex provided, don't filter out any responses.
-    if compiledRegex == nil {
-        return statusCode, len(bodyBytes), true
+func filterResponseByLengthAndRegex(statusCode int, bodyBytes []byte, compiledRegex *regexp.Regexp, excludedLengths map[int]bool) (int, int, bool) {
+    length := len(bodyBytes)
+
+    // If the length is in the excludedLengths map, exclude the response.
+    if excludedLengths[length] {
+        return statusCode, length, false
     }
-    
-	// if a regex is provided, only return true if the response does NOT match the regex
-	if !compiledRegex.Match(bodyBytes) {
-		return statusCode, len(bodyBytes), true
-	}
-		
-    return statusCode, len(bodyBytes), false
+
+    // If there's no regex provided, don't filter out any responses.
+    if compiledRegex == nil {
+        return statusCode, length, true
+    }
+
+    // If a regex is provided, only return true if the response does NOT match the regex
+    if !compiledRegex.Match(bodyBytes) {
+        return statusCode, length, true
+    }
+
+    return statusCode, length, false
 }
 
 func checkProxyReachability(proxy string) {
