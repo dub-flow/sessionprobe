@@ -24,16 +24,17 @@ Usage:
     sessionprobe [flags]
 
 Flags:
-  -u, --urls string           file containing the URLs to be checked (required)
-  -H, --headers string        HTTP headers to be used in the requests in the format "Key1:Value1;Key2:Value2;..."
-  -h, --help                  help for sessionprobe
-      --ignore-css            ignore URLs ending with .css (default true)
-      --ignore-js             ignore URLs ending with .js (default true)
-  -o, --out string            output file (default "output.txt")
-  -p, --proxy string          proxy URL (default: "")
-  -r, --filter-regex string   Filter HTTP responses using this regex. Responses whose body matches this regex will not be part of the output.   
-      --skip-verification     skip verification of SSL certificates (default false)
-  -t, --threads int           number of threads (default 10)
+  -u, --urls string             file containing the URLs to be checked (required)
+  -H, --headers string          HTTP headers to be used in the requests in the format "Key1:Value1;Key2:Value2;..."
+  -h, --help                    help for sessionprobe
+      --ignore-css              ignore URLs ending with .css (default true)
+      --ignore-js               ignore URLs ending with .js (default true)
+  -o, --out string              output file (default "output.txt")
+  -p, --proxy string            proxy URL (default: "")
+  -r, --filter-regex string     exclude HTTP responses using a regex. Responses whose body matches this regex will not be part of the output.
+  -l, --filter-lengths string   exclude HTTP responses by body length. You can specify lengths separated by commas (e.g., "123,456,789").
+      --skip-verification       skip verification of SSL certificates (default false)
+  -t, --threads int             number of threads (default 10)
 
 Examples:
     ./sessionprobe -u ./urls.txt
