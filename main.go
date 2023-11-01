@@ -34,6 +34,11 @@ var (
     red     = color.New(color.FgRed).SprintFunc()
 )
 
+type Result struct {
+    URL    string
+    Length int
+}
+
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "sessionprobe",
@@ -172,15 +177,14 @@ func readURLs(file *os.File) map[string]bool {
     return urls
 }
 
-func processURLs(urls map[string]bool, headers map[string]string, proxy string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp) map[int][]string {
-    // map to store URLs by status code
-	urlStatuses := make(map[int][]string)
+func processURLs(urls map[string]bool, headers map[string]string, proxy string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp) map[int][]Result {
+	// map to store URLs by status code
+	urlStatuses := make(map[int][]Result)
 	var urlStatusesMutex sync.Mutex
 
 	// for the progress counter
 	var processedCount int32
 	totalUrls := int32(len(urls))
-
 
 	// process each URL in the deduplicated map
 	for url := range urls {
@@ -204,13 +208,14 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 				Info("Progress: %.2f%% (%d/%d URLs processed)", percentage, processedCount, totalUrls)
 			}()
 		
-			// Now use checkURL function instead of http.Get
-			statusCode, _, matched := checkURL(url, headers, proxy, compiledRegex)
+			// inside the goroutine of processURLs
+			statusCode, length, matched := checkURL(url, headers, proxy, compiledRegex)
 			if matched {
 				urlStatusesMutex.Lock()
-				urlStatuses[statusCode] = append(urlStatuses[statusCode], url)
+				urlStatuses[statusCode] = append(urlStatuses[statusCode], Result{URL: url, Length: length})
 				urlStatusesMutex.Unlock()
 			}
+
 		}(url)
 	}
 
@@ -218,7 +223,7 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 }
 
 // takes a map of HTTP status codes to URLs and writes it to the output file
-func writeToFile(urlStatuses map[int][]string, outFile *os.File) {
+func writeToFile(urlStatuses map[int][]Result, outFile *os.File) {
     writer := bufio.NewWriter(outFile)
 
     // sort the map keys to ensure consistent output
@@ -229,14 +234,15 @@ func writeToFile(urlStatuses map[int][]string, outFile *os.File) {
     sort.Ints(keys)
 
     for _, k := range keys {
-        _, _ = writer.WriteString(fmt.Sprintf("HTTP Status: %d\n", k))
-        for _, url := range urlStatuses[k] {
-            _, _ = writer.WriteString(url + "\n")
+        _, _ = writer.WriteString(fmt.Sprintf("Responses with Status Code: %d\n\n", k))
+        for _, result := range urlStatuses[k] {
+            _, _ = writer.WriteString(fmt.Sprintf("%s => Length: %d\n", result.URL, result.Length))
         }
         _, _ = writer.WriteString("\n")
     }
     writer.Flush()
 }
+
 
 func parseHeaders(headers string) map[string]string {
 	headerMap := make(map[string]string)
@@ -278,10 +284,9 @@ func checkURL(url string, headers map[string]string, proxy string, compiledRegex
     }
 
     // if a regex pattern is provided, check if the response matches
-    return processResponse(resp.StatusCode, bodyBytes, compiledRegex)
+    return filterResponseByRegex(resp.StatusCode, bodyBytes, compiledRegex)
 }
 
-// setting up the HTTP client with potential proxy and other configurations
 // setting up the HTTP client with potential proxy and other configurations
 func createHTTPClient(proxy string) *http.Client {
 	proxyURLFunc := func(_ *http.Request) (*neturl.URL, error) {
@@ -342,10 +347,17 @@ func readResponseBody(body io.ReadCloser, url string) ([]byte, error) {
     return bodyBytes, nil
 }
 
-func processResponse(statusCode int, bodyBytes []byte, compiledRegex *regexp.Regexp) (int, int, bool) {
-    if compiledRegex != nil && compiledRegex.Match(bodyBytes) {
+func filterResponseByRegex(statusCode int, bodyBytes []byte, compiledRegex *regexp.Regexp) (int, int, bool) {
+    // if there's no regex provided, don't filter out any responses.
+    if compiledRegex == nil {
         return statusCode, len(bodyBytes), true
     }
+    
+    // if a regex is provided, only return true if the response matches the regex
+    if compiledRegex.Match(bodyBytes) {
+        return statusCode, len(bodyBytes), true
+    }
+    
     return statusCode, len(bodyBytes), false
 }
 
