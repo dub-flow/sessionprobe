@@ -59,6 +59,10 @@ docker run -it --rm -v "$(pwd):/app/files" --name sessionprobe fw10/sessionprobe
 - You can build the tool yourself via `go build`
 - You can build the docker image yourself via `docker build . -t fw10/sessionprobe`
 
+# Run Tests 🧪
+
+- To run the tests, run `go test` or `go test -v` (for more details)
+
 # Features 🔎 
 
 - Test for authorization issues
