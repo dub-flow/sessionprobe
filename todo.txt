@@ -9,8 +9,4 @@
 
 * Allow parsing in a swagger file instead of the urls file
 
-* Allow filtering pages by regex (like `-fr` in `ffuf`)
-
 * Allow followign redirects
-
-* Add some tests
