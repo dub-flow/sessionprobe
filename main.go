@@ -211,7 +211,7 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 				// increment the processedCount and log progress
 				atomic.AddInt32(&processedCount, 1)
 				percentage := float64(processedCount) / float64(totalUrls) * 100
-				Info("Progress: %.2f%% (%d/%d URLs processed)", percentage, processedCount, totalUrls)
+				Info("Progress: %.2f%% (%d/%d deduped URLs processed)", percentage, processedCount, totalUrls)
 			}()
 		
 			// inside the goroutine of processURLs
