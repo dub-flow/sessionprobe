@@ -19,12 +19,14 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/spf13/cobra"
 )
 
 var (
     headers string
     urls    string
+	swaggerFile string
     threads int
     out     string
     proxy   string
@@ -57,6 +59,7 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVarP(&headers, "headers", "H", "", "HTTP headers to be used in the requests in the format \"Key1:Value1;Key2:Value2;...\"")
 	rootCmd.PersistentFlags().StringVarP(&urls, "urls", "u", "", "file containing the URLs to be checked (required)")
+	rootCmd.PersistentFlags().StringVarP(&swaggerFile, "swagger", "s", "", "path to the swagger file")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 10, "number of threads")
 	rootCmd.PersistentFlags().StringVarP(&out, "out", "o", "output.txt", "output file")
 	rootCmd.PersistentFlags().StringVarP(&proxy, "proxy", "p", "", "proxy URL (default: \"\")")
@@ -71,84 +74,92 @@ func main() {
 
 // run() gets executed when the root command is called
 func run(cmd *cobra.Command, args []string) {
-	printIntro()
+    printIntro()
+
+    // Check if either urls or swaggerFile is provided
+    if urls == "" && swaggerFile == "" {
+        Error("Please provide either a URLs file using '-u <path_to_urls_file>' or a Swagger file using '-s <path_to_swagger_file>'")
+        Error("Use --help for more information.")
+        return
+    }
 
 	// check if the AppVersion was already set during compilation - otherwise manually get it from `./current_version`
-	CheckAppVersion()
-	color.Yellow("Current version: %s\n\n", AppVersion)
+    CheckAppVersion()
+    color.Yellow("Current version: %s\n\n", AppVersion)
 
-	// the `urls` flag is required
-	if urls == "" {
-		Error("Please provide a URLs file using the '-urls <path_to_urls_file>' argument.")
-		Error("Use --help for more information.")
-		return
-	}
+    if ignoreCSS {
+        Info("Ignoring URLs that end with .css")
+    }
 
-	if ignoreCSS {
-		Info("Ignoring URLs that end with .css")
-	}
+    if ignoreJS {
+        Info("Ignoring URLs that end with .js")
+    }
 
-	if ignoreJS {
-		Info("Ignoring URLs that end with .js")
-	}
+    var headersMap map[string]string
+    if headers != "" {
+        headersMap = parseHeaders(headers)
+    }
 
-	var headersMap map[string]string
-	if headers != "" {
-		headersMap = parseHeaders(headers)
-	}
+    // if a proxy was provided, check if the proxy is reachable. Exit if it's not
+    if proxy != "" {
+        checkProxyReachability(proxy)
+    }
 
-	// if a proxy was provided, check if the proxy is reachable. Exit if it's not
-	if proxy != "" {
-		checkProxyReachability(proxy)
-	}
+    // compile the regex provided via `-fr`
+    var compiledRegex *regexp.Regexp
+    if filterRegex != "" {
+        var err error
+        compiledRegex, err = regexp.Compile(filterRegex)
+        if err != nil {
+            Error("Invalid regex: %s", err)
+            return
+        }
+    }
 
-	// compile the regex provided via `-fr`
-	var compiledRegex *regexp.Regexp
-	if filterRegex != "" {
-		var err error
-		compiledRegex, err = regexp.Compile(filterRegex)
-		if err != nil {
-			Error("Invalid regex: %s", err)
-			return
-		}
-	}
+    var urlsMap map[string]bool
+    var err error
 
-	file, err := os.Open(urls)
-	if err != nil {
-		Error("%s", err)
-		return
-	}
-	defer file.Close()
+    if swaggerFile != "" { // process the Swagger file
+        urlsMap, err = parseSwaggerFile(swaggerFile)
+        if err != nil {
+            Error("Failed to parse swagger file: %s", err)
+            return
+        }
+    } else if urls != "" { // process the URL file
+        file, err := os.Open(urls)
+        if err != nil {
+            Error("%s", err)
+            return
+        }
+        defer file.Close()
+        urlsMap = readURLs(file)
+    }
 
-	// create semaphore with the specified number of threads
-	sem := make(chan bool, threads)
-	// make sure to wait for all threads to finish before exiting the program
-	var wg sync.WaitGroup
+    // create semaphore with the specified number of threads
+    sem := make(chan bool, threads)
+    // make sure to wait for all threads to finish before exiting the program
+    var wg sync.WaitGroup
 
-	// using a map to deduplicate URLs
-	urlsMap := readURLs(file)
+    // total number of URLs
+    urlCount := len(urlsMap)
 
-	// total number of URLs
-	urlCount := len(urlsMap)
+    Info("Starting to check %d URLs (deduplicated) with %d threads", urlCount, threads)
 
-	Info("Starting to check %d URLs (deduplicated) with %d threads", urlCount, threads)
+    // map to store URLs by status code
+    excludedLengths := parseLengths(filterLengths)
+    urlStatuses := processURLs(urlsMap, headersMap, proxy, &wg, sem, compiledRegex, excludedLengths)
 
-	// map to store URLs by status code
-	excludedLengths := parseLengths(filterLengths)
-	urlStatuses := processURLs(urlsMap, headersMap, proxy, &wg, sem, compiledRegex, excludedLengths)
-	
+    // wait for all threads to finish
+    wg.Wait()
 
-	// wait for all threads to finish
-	wg.Wait()
+    outFile, err := os.Create(out)
+    if err != nil {
+        Error("%s", err)
+        return
+    }
+    defer outFile.Close()
 
-	outFile, err := os.Create(out)
-	if err != nil {
-		Error("%s", err)
-		return
-	}
-	defer outFile.Close()
-
-	writeToFile(urlStatuses, outFile)
+    writeToFile(urlStatuses, outFile)
 }
 
 func printIntro() {
@@ -420,6 +431,36 @@ func checkProxyReachability(proxy string) {
 			os.Exit(1)
 		}
 	}
+}
+
+func parseSwaggerFile(filePath string) (map[string]bool, error) {
+    loader := openapi3.NewLoader()
+    swagger, err := loader.LoadFromFile(filePath)
+    if err != nil {
+        return nil, err
+    }
+
+    var baseURL string
+    // check if swagger.Servers is not empty to avoid panics
+    if len(swagger.Servers) > 0 { 
+        baseURL = swagger.Servers[0].URL // taking the first server URL as the base URL
+    } else {
+        // exit in the case where no server is defined in the Swagger file
+        Error("No base URL found in the Swagger file")
+		os.Exit(1)
+    }
+
+    urlMap := make(map[string]bool)
+    if swagger.Paths != nil {
+        for path, item := range swagger.Paths {
+            if item.Get != nil {
+                fullPath := baseURL + path // concatenate base URL with path
+                urlMap[fullPath] = true
+            }
+        }
+    }
+
+    return urlMap, nil
 }
 
 func Info(format string, a ...interface{}) {
