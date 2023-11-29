@@ -5,3 +5,5 @@
 * Feature to find potentially interesting outliers where response code is not 200
 
 * Allow parsing in a swagger file instead of the urls file
+
+* Automatically exclude length 0
