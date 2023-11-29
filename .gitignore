@@ -30,3 +30,6 @@ unauthenticated.txt
 bearer_token*.txt
 
 test-output
+
+# Avoid committing any of my tests
+*.txt
