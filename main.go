@@ -321,6 +321,11 @@ func createHTTPClient(proxy string) *http.Client {
 	if proxy == "" {
 		proxyURLFunc = http.ProxyFromEnvironment
 	}
+
+	// custom CheckRedirect function that always returns an error. This prevents the client from following any redirects
+    noRedirect := func(req *http.Request, via []*http.Request) error {
+        return http.ErrUseLastResponse
+    }
 	
     return &http.Client{
         Transport: &http.Transport{
@@ -331,6 +336,7 @@ func createHTTPClient(proxy string) *http.Client {
             },
         },
         Timeout: 10 * time.Second, // set timeout for HTTP requests
+		CheckRedirect: noRedirect, // Set the custom redirect policy
     }
 }
 
