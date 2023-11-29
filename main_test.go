@@ -126,7 +126,7 @@ func TestCheckURL_ExcludedLength(t *testing.T) {
 }
 
 func TestFilterRegexFunctionality(t *testing.T) {
-	// Ensure the test-output directory exists.
+	// Ensure the 'testing' directory exists.
 	EnsureOutputFolderExists(t)
 
 	// 1. Set up a mock HTTP server.
@@ -145,7 +145,7 @@ func TestFilterRegexFunctionality(t *testing.T) {
 	defer ts.Close()
 
 	// Use filepath.Join to construct the file path in an OS-agnostic manner.
-	urlsFilePath := filepath.Join(".", "test-output", "test-urls-regex.txt")
+	urlsFilePath := filepath.Join(".", "testing", "test-urls-regex.txt")
 	// Open (or create if it doesn't exist) and truncate the URLs file.
 	urlsFile, err := os.OpenFile(urlsFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -164,7 +164,7 @@ func TestFilterRegexFunctionality(t *testing.T) {
 	}
 
 	// 2. Use go run main.go with filter-regex to probe the mock server.
-	outputFile := filepath.Join(".", "test-output", "test-output-regex.txt")
+	outputFile := filepath.Join(".", "testing", "test-output-regex.txt")
 	cmd := exec.Command("go", "run", ".", "-u", urlsFilePath, "-o", outputFile, "--filter-regex", "This should not be included.")
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
@@ -190,13 +190,13 @@ func TestFilterRegexFunctionality(t *testing.T) {
 	}
 }
 
-// ensures the ./test-output folder exists for test files
+// ensures the ./testing folder exists for test files
 func EnsureOutputFolderExists(t *testing.T) {
-	dir := filepath.Join(".", "test-output")
+	dir := filepath.Join(".", "testing")
 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.Mkdir(dir, 0755); err != nil {
-			t.Fatalf("Failed to create ./test-output directory: %v", err)
+			t.Fatalf("Failed to create ./testing directory: %v", err)
 		}
 	}
 }

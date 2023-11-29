@@ -29,7 +29,7 @@ releases
 unauthenticated.txt
 bearer_token*.txt
 
-test-output
+testing
 
 # Avoid committing any of my tests
 *.txt
