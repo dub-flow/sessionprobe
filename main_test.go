@@ -32,7 +32,7 @@ func TestProcessResponse_MatchesRegex(t *testing.T) {
 	statusCode := 200
 	body := []byte("Hello, World!")
 	expectedStatus, expectedLength, expectedMatched := 200, len(body), false
-	excludedLengths := make(map[int]bool)  
+	excludedLengths := make(map[int]bool)
 
 	actualStatus, actualLength, actualMatched := filterResponseByLengthAndRegex(statusCode, body, compiledRegex, excludedLengths)
 
@@ -47,7 +47,7 @@ func TestProcessResponse_DoesNotMatchRegex(t *testing.T) {
 	statusCode := 200
 	body := []byte("Hello, World!")
 	expectedStatus, expectedLength, expectedMatched := 200, len(body), true
-	excludedLengths := make(map[int]bool)  
+	excludedLengths := make(map[int]bool)
 
 	actualStatus, actualLength, actualMatched := filterResponseByLengthAndRegex(statusCode, body, compiledRegex, excludedLengths)
 
@@ -67,11 +67,11 @@ func TestCheckURL_MatchesRegex(t *testing.T) {
 
 	headers := make(map[string]string)
 	proxy := ""
-	compiledRegex, _ := regexp.Compile("World") // Matching regex
+	compiledRegex, _ := regexp.Compile("World")   // Matching regex
 	expectedStatus, expectedMatched := 200, false // It should filter out the response because it matches
 	excludedLengths := make(map[int]bool)
 
-	actualStatus, _, actualMatched := checkURL(server.URL, headers, proxy, compiledRegex, excludedLengths)
+	actualStatus, _, actualMatched := checkURL("GET", server.URL, headers, proxy, compiledRegex, excludedLengths)
 
 	if actualStatus != expectedStatus || actualMatched != expectedMatched {
 		t.Errorf("Expected status %d, matched %v but got status %d, matched %v",
@@ -89,11 +89,11 @@ func TestCheckURL_DoesNotMatchRegex(t *testing.T) {
 
 	headers := make(map[string]string)
 	proxy := ""
-	compiledRegex, _ := regexp.Compile("Bye") // Non-matching regex
+	compiledRegex, _ := regexp.Compile("Bye")    // Non-matching regex
 	expectedStatus, expectedMatched := 200, true // It should not filter out the response because it doesn't match
 	excludedLengths := make(map[int]bool)
 
-	actualStatus, _, actualMatched := checkURL(server.URL, headers, proxy, compiledRegex, excludedLengths)
+	actualStatus, _, actualMatched := checkURL("GET", server.URL, headers, proxy, compiledRegex, excludedLengths)
 
 	if actualStatus != expectedStatus || actualMatched != expectedMatched {
 		t.Errorf("Expected status %d, matched %v but got status %d, matched %v",
@@ -111,13 +111,13 @@ func TestCheckURL_ExcludedLength(t *testing.T) {
 
 	headers := make(map[string]string)
 	proxy := ""
-	compiledRegex, _ := regexp.Compile(".*") // Matching any string
+	compiledRegex, _ := regexp.Compile(".*")      // Matching any string
 	expectedStatus, expectedMatched := 200, false // It should filter out the response because of its length
 	excludedLengths := map[int]bool{
 		13: true, // Excluding the length 13
 	}
 
-	actualStatus, _, actualMatched := checkURL(server.URL, headers, proxy, compiledRegex, excludedLengths)
+	actualStatus, _, actualMatched := checkURL("GET", server.URL, headers, proxy, compiledRegex, excludedLengths)
 
 	if actualStatus != expectedStatus || actualMatched != expectedMatched {
 		t.Errorf("Expected status %d, matched %v but got status %d, matched %v",
