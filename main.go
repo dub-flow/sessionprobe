@@ -267,6 +267,7 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 
 		}(url)
 	}
+	Info("Done. %d deduped URLs processed", totalUrls)
 
 	return urlStatuses
 }
@@ -287,7 +288,7 @@ func writeToFile(urlStatuses map[int][]Result, outFile *os.File) {
 		for _, result := range urlStatuses[k] {
 			_, _ = writer.WriteString(fmt.Sprintf("| %s | %s => Length: %d\n", result.Method, result.URL, result.Length))
 		}
-		writer.WriteString("\n")
+		_, _ = writer.WriteString("\n")
 	}
 	writer.Flush()
 }
