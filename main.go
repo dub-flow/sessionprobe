@@ -145,7 +145,7 @@ func run(cmd *cobra.Command, args []string) {
 	// total number of URLs
 	urlCount := len(urlsMap)
 
-	Info("Starting to check %d URLs (deduplicated) with %d threads", urlCount, threads)
+	Info("Starting to check %d unique URLs (deduplicated) with %d threads", urlCount, threads)
 
 	// map to store URLs by status code
 	excludedLengths := parseLengths(filterLengths)
@@ -198,31 +198,34 @@ func readURLs(file *os.File) map[string]bool {
 
 func getMethods() []string {
 	out := []string{"GET"}
+	Info("Running GET requests against every URL")
 
 	if methodALL || methodPOST {
 		out = append(out, "POST")
-		Warn("Testing POST requests for URLs (this feature is currently in its initial development phase)")
+		Warn("Also running POST requests against every URL (this feature is currently in its initial development phase)")
 		Warn("It currently sends a request to each URL with an empty body and observes the response")
 	}
 
 	if methodALL || methodPUT {
 		out = append(out, "PUT")
-		Warn("Testing PUT requests for URLs (this feature is currently in its initial development phase)")
+		Warn("Also running PUT requests against every URL (this feature is currently in its initial development phase)")
 		Warn("It currently sends a request to each URL with an empty body and observes the response")
 	}
 
 	if methodALL || methodPATCH {
 		out = append(out, "PATCH")
-		Warn("Testing PATCH requests for URLs (this feature is currently in its initial development phase)")
+		Warn("Also running PATCH requests against every URL (this feature is currently in its initial development phase)")
 		Warn("It currently sends a request to each URL with an empty body and observes the response")
 	}
 
 	if methodALL || methodDELETE {
 		out = append(out, "DELETE")
+		Info("Also running DELETE requests against every URL")
 	}
 
 	if methodALL || methodOPTIONS {
 		out = append(out, "OPTIONS")
+		Info("Also running OPTIONS requests against every URL")
 	}
 
 	return out
