@@ -41,6 +41,7 @@ var (
 	methodALL        bool
 	green            = color.New(color.FgGreen).SprintFunc()
 	red              = color.New(color.FgRed).SprintFunc()
+	yellow           = color.New(color.FgYellow).SprintFunc()
 )
 
 type Result struct {
@@ -72,12 +73,12 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&ignoreJS, "ignore-js", true, "ignore URLs ending with .js")
 	rootCmd.PersistentFlags().StringVarP(&filterRegex, "filter-regex", "r", "", "Exclude HTTP responses using a regex. Responses whose body matches this regex will not be part of the output.")
 	rootCmd.PersistentFlags().StringVarP(&filterLengths, "filter-lengths", "l", "", "Exclude HTTP responses by body length. You can specify lengths separated by commas (e.g., \"123,456,789\").")
-	rootCmd.PersistentFlags().BoolVar(&methodPOST, "check-post", false, "Check POST method")
-	rootCmd.PersistentFlags().BoolVar(&methodPUT, "check-put", false, "Check PUT method")
-	rootCmd.PersistentFlags().BoolVar(&methodDELETE, "check-delete", false, "Check DELETE method")
-	rootCmd.PersistentFlags().BoolVar(&methodPATCH, "check-patch", false, "Check PATCH method")
-	rootCmd.PersistentFlags().BoolVar(&methodOPTIONS, "check-options", false, "Check OPTIONS method")
-	rootCmd.PersistentFlags().BoolVar(&methodALL, "check-all", false, "Check POST, DELETE, PUT, PATCH & OPTIONS methods")
+	rootCmd.PersistentFlags().BoolVar(&methodPOST, "check-post", false, "Check POST method (default false)")
+	rootCmd.PersistentFlags().BoolVar(&methodPUT, "check-put", false, "Check PUT method (default false)")
+	rootCmd.PersistentFlags().BoolVar(&methodDELETE, "check-delete", false, "Check DELETE method (default false)")
+	rootCmd.PersistentFlags().BoolVar(&methodPATCH, "check-patch", false, "Check PATCH method (default false)")
+	rootCmd.PersistentFlags().BoolVar(&methodOPTIONS, "check-options", false, "Check OPTIONS method (default false)")
+	rootCmd.PersistentFlags().BoolVar(&methodALL, "check-all", false, "Check POST, DELETE, PUT, PATCH & OPTIONS methods (default false)")
 
 	rootCmd.Execute()
 }
@@ -200,14 +201,20 @@ func getMethods() []string {
 
 	if methodALL || methodPOST {
 		out = append(out, "POST")
+		Warn("Testing POST requests for URLs (this feature is currently in its initial development phase)")
+		Warn("It currently sends a request to each URL with an empty body and observes the response")
 	}
 
 	if methodALL || methodPUT {
 		out = append(out, "PUT")
+		Warn("Testing PUT requests for URLs (this feature is currently in its initial development phase)")
+		Warn("It currently sends a request to each URL with an empty body and observes the response")
 	}
 
 	if methodALL || methodPATCH {
 		out = append(out, "PATCH")
+		Warn("Testing PATCH requests for URLs (this feature is currently in its initial development phase)")
+		Warn("It currently sends a request to each URL with an empty body and observes the response")
 	}
 
 	if methodALL || methodDELETE {
@@ -472,6 +479,10 @@ func checkProxyReachability(proxy string) {
 
 func Info(format string, a ...interface{}) {
 	log.Printf("%s", green(fmt.Sprintf(format, a...)))
+}
+
+func Warn(format string, a ...interface{}) {
+	log.Printf("%s", yellow(fmt.Sprintf(format, a...)))
 }
 
 func Error(format string, a ...interface{}) {
