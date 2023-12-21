@@ -72,12 +72,12 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&ignoreJS, "ignore-js", true, "ignore URLs ending with .js")
 	rootCmd.PersistentFlags().StringVarP(&filterRegex, "filter-regex", "r", "", "Exclude HTTP responses using a regex. Responses whose body matches this regex will not be part of the output.")
 	rootCmd.PersistentFlags().StringVarP(&filterLengths, "filter-lengths", "l", "", "Exclude HTTP responses by body length. You can specify lengths separated by commas (e.g., \"123,456,789\").")
-	rootCmd.PersistentFlags().BoolVar(&methodPOST, "check-post", false, "check POST method")
-	rootCmd.PersistentFlags().BoolVar(&methodPUT, "check-put", false, "check PUT method")
-	rootCmd.PersistentFlags().BoolVar(&methodDELETE, "check-delete", false, "check DELETE method")
-	rootCmd.PersistentFlags().BoolVar(&methodPATCH, "check-patch", false, "check PATCH method")
-	rootCmd.PersistentFlags().BoolVar(&methodOPTIONS, "check-options", false, "check OPTIONS method")
-	rootCmd.PersistentFlags().BoolVar(&methodALL, "check-all", false, "check POST, DELETE, PUT, PATCH & OPTIONS methods")
+	rootCmd.PersistentFlags().BoolVar(&methodPOST, "check-post", false, "Check POST method")
+	rootCmd.PersistentFlags().BoolVar(&methodPUT, "check-put", false, "Check PUT method")
+	rootCmd.PersistentFlags().BoolVar(&methodDELETE, "check-delete", false, "Check DELETE method")
+	rootCmd.PersistentFlags().BoolVar(&methodPATCH, "check-patch", false, "Check PATCH method")
+	rootCmd.PersistentFlags().BoolVar(&methodOPTIONS, "check-options", false, "Check OPTIONS method")
+	rootCmd.PersistentFlags().BoolVar(&methodALL, "check-all", false, "Check POST, DELETE, PUT, PATCH & OPTIONS methods")
 
 	rootCmd.Execute()
 }
@@ -290,6 +290,7 @@ func writeToFile(urlStatuses map[int][]Result, outFile *os.File) {
 		}
 		_, _ = writer.WriteString("\n")
 	}
+
 	writer.Flush()
 }
 
@@ -310,6 +311,7 @@ func parseLengths(lengths string) map[int]bool {
 		}
 		lengthsMap[length] = true
 	}
+
 	return lengthsMap
 }
 
@@ -416,6 +418,7 @@ func handleHTTPError(err error, url string) bool {
 		Error("Error fetching URL: %s - %s", url, err)
 		return true
 	}
+
 	return false
 }
 
@@ -425,6 +428,7 @@ func readResponseBody(body io.ReadCloser, url string) ([]byte, error) {
 		Error("Error reading response body for URL: %s - %s", url, err)
 		return nil, err
 	}
+
 	return bodyBytes, nil
 }
 
