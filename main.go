@@ -142,11 +142,6 @@ func run(cmd *cobra.Command, args []string) {
 	// using a map to deduplicate URLs
 	urlsMap := readURLs(file)
 
-	// total number of URLs
-	urlCount := len(urlsMap)
-
-	Info("Starting to check %d unique URLs (deduplicated) with %d threads", urlCount, threads)
-
 	// map to store URLs by status code
 	excludedLengths := parseLengths(filterLengths)
 	urlStatuses := processURLs(urlsMap, headersMap, proxy, &wg, sem, compiledRegex, excludedLengths)
@@ -240,7 +235,12 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 
 	// for the progress counter
 	var processedCount int32
-	totalUrls := int32(len(urls)) * int32(len(methods))
+	totalUrls := int32(len(urls))
+	totalMethods := int32(len(methods))
+	totalRequests := totalUrls * totalMethods
+
+	Info("Starting to check %d unique URLs (deduplicated) and %d methods => %d requests", totalUrls, totalMethods, totalRequests)
+	Info("We use %d threads", threads)
 
 	// process each URL in the deduplicated map
 	for url := range urls {
@@ -260,12 +260,11 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 
 				// increment the processedCount and log progress
 				atomic.AddInt32(&processedCount, 1)
-				percentage := float64(processedCount) / float64(totalUrls) * 100
-				Info("Progress: %.2f%% (%d/%d deduped URLs processed)", percentage, processedCount, totalUrls)
+				percentage := float64(processedCount) / float64(totalRequests) * 100
+				Info("Progress: %.2f%% (%d/%d deduped URLs processed)", percentage, processedCount, totalRequests)
 			}()
 
 			// inside the goroutine of processURLs
-
 			for _, method := range methods {
 				statusCode, length, matched := checkURL(method, url, headers, proxy, compiledRegex, allowedLengths)
 				if matched {
@@ -277,7 +276,7 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 
 		}(url)
 	}
-	Info("Done. %d deduped URLs processed", totalUrls)
+	Info("Done. %d deduped URLs processed", totalRequests)
 
 	return urlStatuses
 }
