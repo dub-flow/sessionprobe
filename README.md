@@ -1,7 +1,5 @@
 ![Go Version](https://img.shields.io/github/go-mod/go-version/dub-flow/sessionprobe)
-![GitHub Downloads](https://img.shields.io/github/downloads/dub-flow/sessionprobe/total)
 ![Docker Image Size](https://img.shields.io/docker/image-size/fw10/sessionprobe/latest)
-![Docker Pulls](https://img.shields.io/docker/pulls/fw10/sessionprobe)
 
 # SessionProbe 🚀⚡
 
