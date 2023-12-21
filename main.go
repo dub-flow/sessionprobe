@@ -257,11 +257,6 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 				<-sem
 				// always decrement the waitgroup counter
 				wg.Done()
-
-				// increment the processedCount and log progress
-				atomic.AddInt32(&processedCount, 1)
-				percentage := float64(processedCount) / float64(totalRequests) * 100
-				Info("Progress: %.2f%% (%d/%d deduped URLs processed)", percentage, processedCount, totalRequests)
 			}()
 
 			// inside the goroutine of processURLs
@@ -272,11 +267,15 @@ func processURLs(urls map[string]bool, headers map[string]string, proxy string, 
 					urlStatuses[statusCode] = append(urlStatuses[statusCode], Result{Method: method, URL: url, Length: length})
 					urlStatusesMutex.Unlock()
 				}
+
+				// increment the processedCount and log progress
+				atomic.AddInt32(&processedCount, 1)
+				percentage := float64(processedCount) / float64(totalRequests) * 100
+				Info("Progress: %.2f%% (%d/%d deduped URLs processed)", percentage, processedCount, totalRequests)
 			}
 
 		}(url)
 	}
-	Info("Done. %d deduped URLs processed", totalRequests)
 
 	return urlStatuses
 }
