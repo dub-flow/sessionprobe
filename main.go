@@ -106,7 +106,7 @@ func run(cmd *cobra.Command, args []string) {
 		Info("Ignoring URLs that end with .js")
 	}
 
-	var headersMap map[string]string
+	var headersMap map[string][]string
 	if headers != "" {
 		headersMap = parseHeaders(headers)
 	}
@@ -226,7 +226,7 @@ func getMethods() []string {
 	return out
 }
 
-func processURLs(urls map[string]bool, headers map[string]string, proxy string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp, allowedLengths map[int]bool) map[int][]Result {
+func processURLs(urls map[string]bool, headers map[string][]string, proxy string, wg *sync.WaitGroup, sem chan bool, compiledRegex *regexp.Regexp, allowedLengths map[int]bool) map[int][]Result {
 	// map to store URLs by status code
 	urlStatuses := make(map[int][]Result)
 	var urlStatusesMutex sync.Mutex
@@ -323,26 +323,30 @@ func parseLengths(lengths string) map[int]bool {
 	return lengthsMap
 }
 
-func parseHeaders(headers string) map[string]string {
-	headerMap := make(map[string]string)
-	pairs := strings.Split(headers, ";")
+func parseHeaders(headers string) map[string][]string {
+    headerMap := make(map[string][]string)
+    pairs := strings.Split(headers, ";")
 
-	for _, pair := range pairs {
-		parts := strings.SplitN(pair, ":", 2)
+    for _, pair := range pairs {
+        parts := strings.SplitN(pair, ":", 2)
 
-		if len(parts) != 2 {
-			Error("Invalid header format: %s", pair)
-			continue
-		}
+        if len(parts) != 2 {
+            Error("Invalid header format: %s", pair)
+            continue
+        }
 
-		headerMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
-	}
+        key := strings.TrimSpace(parts[0])
+        value := strings.TrimSpace(parts[1])
 
-	return headerMap
+        // accumulate headers of the same key, required for e.g. setting multiple cookies
+        headerMap[key] = append(headerMap[key], value)
+    }
+
+    return headerMap
 }
 
 // function to do the HTTP request and check the response's status code and response length
-func checkURL(method string, url string, headers map[string]string, proxy string, compiledRegex *regexp.Regexp, allowedLengths map[int]bool) (int, int, bool) {
+func checkURL(method string, url string, headers map[string][]string, proxy string, compiledRegex *regexp.Regexp, allowedLengths map[int]bool) (int, int, bool) {
 	client := createHTTPClient(proxy)
 	req, err := prepareHTTPRequest(method, url, headers)
 
@@ -395,18 +399,26 @@ func createHTTPClient(proxy string) *http.Client {
 }
 
 // create a new HTTP request and set the provided headers
-func prepareHTTPRequest(method string, url string, headers map[string]string) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
-	}
+func prepareHTTPRequest(method string, url string, headers map[string][]string) (*http.Request, error) {
+    req, err := http.NewRequest(method, url, nil)
+    if err != nil {
+        return nil, err
+    }
 
-	// add custom headers to the request if any provided
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
+    // Add custom headers to the request. If multiple cookies are provided, concatenate them.
+    for key, values := range headers {
+        if key == "Cookie" {
+            // Join multiple cookie values into a single header
+            req.Header.Set(key, strings.Join(values, "; "))
+        } else {
+            // For other headers, just set the first value (modify this as needed)
+            for _, value := range values {
+                req.Header.Add(key, value)
+            }
+        }
+    }
 
-	return req, nil
+    return req, nil
 }
 
 func handleHTTPError(err error, url string) bool {

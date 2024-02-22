@@ -14,15 +14,21 @@ import (
 
 func TestParseHeaders(t *testing.T) {
 	headersString := "Key1:Value1;Key2:Value2"
-	expected := map[string]string{
-		"Key1": "Value1",
-		"Key2": "Value2",
+	expected := map[string][]string{
+		"Key1": {"Value1"},
+		"Key2": {"Value2"},
 	}
 
 	result := parseHeaders(headersString)
-	for k, v := range expected {
-		if resultV, ok := result[k]; !ok || v != resultV {
-			t.Errorf("Expected %s for key %s but got %s", v, k, resultV)
+	for k, vSlice := range expected {
+		if resultSlice, ok := result[k]; !ok || len(resultSlice) != len(vSlice) {
+			t.Errorf("Expected key %s to exist with %d value(s), but got %d", k, len(vSlice), len(resultSlice))
+		} else {
+			for i, v := range vSlice {
+				if resultSlice[i] != v {
+					t.Errorf("Expected %s for key %s but got %s", v, k, resultSlice[i])
+				}
+			}
 		}
 	}
 }
@@ -65,7 +71,7 @@ func TestCheckURL_MatchesRegex(t *testing.T) {
 	}))
 	defer server.Close()
 
-	headers := make(map[string]string)
+	headers := make(map[string][]string)
 	proxy := ""
 	compiledRegex, _ := regexp.Compile("World")   // Matching regex
 	expectedStatus, expectedMatched := 200, false // It should filter out the response because it matches
@@ -87,7 +93,7 @@ func TestCheckURL_DoesNotMatchRegex(t *testing.T) {
 	}))
 	defer server.Close()
 
-	headers := make(map[string]string)
+	headers := make(map[string][]string)
 	proxy := ""
 	compiledRegex, _ := regexp.Compile("Bye")    // Non-matching regex
 	expectedStatus, expectedMatched := 200, true // It should not filter out the response because it doesn't match
@@ -109,7 +115,7 @@ func TestCheckURL_ExcludedLength(t *testing.T) {
 	}))
 	defer server.Close()
 
-	headers := make(map[string]string)
+	headers := make(map[string][]string)
 	proxy := ""
 	compiledRegex, _ := regexp.Compile(".*")      // Matching any string
 	expectedStatus, expectedMatched := 200, false // It should filter out the response because of its length
