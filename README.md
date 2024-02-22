@@ -46,6 +46,7 @@ Examples:
     ./sessionprobe -u ./urls.txt -H "Cookie: .AspNetCore.Cookies=<cookie>" -o ./output.txt
     ./sessionprobe -u ./urls.txt -H "Authorization: Bearer <token>" --proxy http://localhost:8080
     ./sessionprobe -u ./urls.txt -r "Page Not Found"
+    ./sessionprobe -u ./urls.txt -H "Cookie: .AspNetCore.Cookies=<cookie>;Cookie: <another-cookie>=<another_value>"
 ```
 
 # Run via Docker 🐳
