@@ -37,7 +37,6 @@ var (
 	methodPUT        bool
 	methodDELETE     bool
 	methodPATCH      bool
-	methodOPTIONS    bool
 	methodALL        bool
 	green            = color.New(color.FgGreen).SprintFunc()
 	red              = color.New(color.FgRed).SprintFunc()
@@ -78,8 +77,7 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&methodPUT, "check-put", false, "Check PUT method (default false)")
 	rootCmd.PersistentFlags().BoolVar(&methodDELETE, "check-delete", false, "Check DELETE method (default false)")
 	rootCmd.PersistentFlags().BoolVar(&methodPATCH, "check-patch", false, "Check PATCH method (default false)")
-	rootCmd.PersistentFlags().BoolVar(&methodOPTIONS, "check-options", false, "Check OPTIONS method (default false)")
-	rootCmd.PersistentFlags().BoolVar(&methodALL, "check-all", false, "Check POST, DELETE, PUT, PATCH & OPTIONS methods (default false)")
+	rootCmd.PersistentFlags().BoolVar(&methodALL, "check-all", false, "Check POST, DELETE, PUT & PATCH methods (default false)")
 
 	rootCmd.Execute()
 }
@@ -222,11 +220,6 @@ func getMethods() []string {
 	if methodALL || methodDELETE {
 		out = append(out, "DELETE")
 		Info("Also running DELETE requests against every URL")
-	}
-
-	if methodALL || methodOPTIONS {
-		out = append(out, "OPTIONS")
-		Info("Also running OPTIONS requests against every URL")
 	}
 
 	return out

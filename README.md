@@ -33,9 +33,8 @@ Flags:
   -l, --filter-lengths string   exclude HTTP responses by body length. You can specify lengths separated by commas (e.g., "123,456,789").
       --skip-verification       skip verification of SSL certificates (default false)
   -t, --threads int             number of threads (default 10)
-      --check-all               Check POST, DELETE, PUT, PATCH & OPTIONS methods (default false)
+      --check-all               Check POST, DELETE, PUT & PATCH methods (default false)
       --check-delete            Check DELETE method (default false)
-      --check-options           Check OPTIONS method (default false)
       --check-patch             Check PATCH method (default false)
       --check-post              Check POST method (default false)
       --check-put               Check PUT method (default false)
