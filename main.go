@@ -92,6 +92,9 @@ func run(cmd *cobra.Command, args []string) {
 	CheckAppVersion()
 	color.Yellow("Current version: %s\n\n", AppVersion)
 
+	// check if a later version of this tool exists
+	NotifyOfUpdates()
+
 	// the `urls` flag is required
 	if urls == "" {
 		Error("Please provide a URLs file using the '-urls <path_to_urls_file>' argument.")
@@ -327,25 +330,25 @@ func parseLengths(lengths string) map[int]bool {
 }
 
 func parseHeaders(headers string) map[string][]string {
-    headerMap := make(map[string][]string)
-    pairs := strings.Split(headers, ";")
+	headerMap := make(map[string][]string)
+	pairs := strings.Split(headers, ";")
 
-    for _, pair := range pairs {
-        parts := strings.SplitN(pair, ":", 2)
+	for _, pair := range pairs {
+		parts := strings.SplitN(pair, ":", 2)
 
-        if len(parts) != 2 {
-            Error("Invalid header format: %s", pair)
-            continue
-        }
+		if len(parts) != 2 {
+			Error("Invalid header format: %s", pair)
+			continue
+		}
 
-        key := strings.TrimSpace(parts[0])
-        value := strings.TrimSpace(parts[1])
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
 
-        // accumulate headers of the same key, required for e.g. setting multiple cookies
-        headerMap[key] = append(headerMap[key], value)
-    }
+		// accumulate headers of the same key, required for e.g. setting multiple cookies
+		headerMap[key] = append(headerMap[key], value)
+	}
 
-    return headerMap
+	return headerMap
 }
 
 // function to do the HTTP request and check the response's status code and response length
@@ -403,25 +406,25 @@ func createHTTPClient(proxy string) *http.Client {
 
 // create a new HTTP request and set the provided headers
 func prepareHTTPRequest(method string, url string, headers map[string][]string) (*http.Request, error) {
-    req, err := http.NewRequest(method, url, nil)
-    if err != nil {
-        return nil, err
-    }
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return nil, err
+	}
 
-    // Add custom headers to the request. If multiple cookies are provided, concatenate them.
-    for key, values := range headers {
-        if key == "Cookie" {
-            // Join multiple cookie values into a single header
-            req.Header.Set(key, strings.Join(values, "; "))
-        } else {
-            // For other headers, just set the first value (modify this as needed)
-            for _, value := range values {
-                req.Header.Add(key, value)
-            }
-        }
-    }
+	// Add custom headers to the request. If multiple cookies are provided, concatenate them.
+	for key, values := range headers {
+		if key == "Cookie" {
+			// Join multiple cookie values into a single header
+			req.Header.Set(key, strings.Join(values, "; "))
+		} else {
+			// For other headers, just set the first value (modify this as needed)
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
+	}
 
-    return req, nil
+	return req, nil
 }
 
 func handleHTTPError(err error, url string) bool {
